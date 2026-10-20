@@ -1,0 +1,4 @@
+description: Go, Node.js and Python with both agents, Docker and common CLI tools
+languages: [go, node, python]
+agents: [claude, codex]
+tools: [gh, jq, ripgrep, docker-in-docker]
