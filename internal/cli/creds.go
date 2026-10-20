@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"runtime"
 	"time"
 
 	"github.com/charmbracelet/huh"
@@ -88,20 +89,44 @@ func newCredsAWSCmd(user *string) *cobra.Command {
 }
 
 func newCredsGitHubCmd(user *string) *cobra.Command {
-	var fromStdin bool
+	var fromStdin, create, noBrowser bool
+	var repo, access string
+	var days int
+	var perms []string
 	cmd := &cobra.Command{
 		Use:   "github [dir]",
 		Short: "Log gh in with a fine-grained, expiring personal access token",
 		Long: `Log gh in with a fine-grained personal access token and set it up as git's
 credential helper. Classic tokens and tokens without an expiry are refused.
 
-Create one at https://github.com/settings/personal-access-tokens/new limited
-to the repositories and permissions this project needs.`,
-		Example: `  dws creds github
+With --create, dws opens GitHub's "new token" page pre-filled for this
+project: name, expiry, the repository owner and a permission preset. GitHub
+can't pre-select repositories, so choose "Only select repositories" and pick
+this one, generate the token, and paste it at the prompt.
+
+Access presets: read (contents:read), push (contents:write),
+pr (contents:write + pull_requests:write). Add more with --perm.`,
+		Example: `  dws creds github --create                 # guided: opens a pre-filled token page
+  dws creds github --create --access push --days 7 --perm issues=write
+  dws creds github                          # paste an existing token
   pbpaste | dws creds github --token-stdin`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
+			errOut := cmd.ErrOrStderr()
+			if create {
+				extra, err := parseKV[string](perms, "--perm")
+				if err != nil {
+					return err
+				}
+				if err := guideTokenCreation(ctx, errOut, dirArg(args), repo, access, days, extra, !noBrowser); err != nil {
+					return err
+				}
+				if !fromStdin && !isInteractive() {
+					fmt.Fprintf(errOut, "\nThen pass it in from a terminal: dws creds github %s\n", dirArg(args))
+					return nil
+				}
+			}
 			ctr, err := container(ctx, dirArg(args), *user)
 			if err != nil {
 				return err
@@ -137,8 +162,51 @@ to the repositories and permissions this project needs.`,
 			return nil
 		},
 	}
-	cmd.Flags().BoolVar(&fromStdin, "token-stdin", false, "read the token from stdin")
+	f := cmd.Flags()
+	f.BoolVar(&fromStdin, "token-stdin", false, "read the token from stdin")
+	f.BoolVar(&create, "create", false, "open GitHub's token page pre-filled for this project first")
+	f.StringVar(&repo, "repo", "", "with --create: owner/name (default: from the git remote \"origin\")")
+	f.StringVar(&access, "access", "pr", "with --create: permission preset: read, push or pr")
+	f.IntVar(&days, "days", 30, "with --create: days until the token expires (1-366)")
+	f.StringArrayVar(&perms, "perm", nil, "with --create: extra permission name=read|write|admin (repeatable)")
+	f.BoolVar(&noBrowser, "no-browser", false, "with --create: print the URL instead of opening a browser")
 	return cmd
+}
+
+// guideTokenCreation prints (and optionally opens) a pre-filled fine-grained
+// token URL with instructions for the parts GitHub can't pre-fill.
+func guideTokenCreation(ctx context.Context, w io.Writer, dir, repo, access string, days int, extra map[string]string, browser bool) error {
+	var owner, name string
+	var err error
+	if repo != "" {
+		owner, name, err = creds.ParseGitHubRepo(repo)
+	} else {
+		owner, name, err = creds.GitHubRepo(ctx, runner, dir)
+	}
+	if err != nil {
+		return err
+	}
+	tmpl, err := creds.NewPATTemplate(owner, name, access, days, extra)
+	if err != nil {
+		return err
+	}
+	link := tmpl.URL()
+
+	fmt.Fprintf(w, "Create a fine-grained token for %s/%s:\n\n  %s\n\n", owner, name, link)
+	fmt.Fprintf(w, "On that page:\n")
+	fmt.Fprintf(w, "  1. Check Resource owner is %s (for organizations, re-select it; GitHub may not apply it).\n", owner)
+	fmt.Fprintf(w, "  2. Repository access: choose \"Only select repositories\" and pick %s.\n", name)
+	fmt.Fprintf(w, "  3. Review the pre-filled permissions and the %d-day expiry, then Generate token and copy it.\n", days)
+	if browser {
+		opener := "xdg-open"
+		if runtime.GOOS == "darwin" {
+			opener = "open"
+		}
+		if _, err := runner.Run(ctx, nil, opener, link); err != nil {
+			fmt.Fprintln(w, "\n(Couldn't open a browser; open the link above yourself.)")
+		}
+	}
+	return nil
 }
 
 func dirArg(args []string) string {
