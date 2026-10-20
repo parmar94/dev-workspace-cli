@@ -2,12 +2,15 @@ package devcontainer
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 
 	"go.yaml.in/yaml/v3"
 )
@@ -31,6 +34,38 @@ type State struct {
 	// AgentGuard installs deny rules for the selected agents.
 	AgentGuard bool  `yaml:"agent_guard"`
 	Ports      []int `yaml:"ports,omitempty"`
+	// Generated maps each generated file (relative to the project root) to a
+	// hash of its content, so dws update can detect hand edits.
+	Generated map[string]string `yaml:"generated,omitempty"`
+}
+
+// Hash returns the content hash recorded in State.Generated.
+func Hash(data []byte) string {
+	sum := sha256.Sum256(data)
+	return "sha256:" + hex.EncodeToString(sum[:])
+}
+
+// Record stores the hashes of files in s.Generated.
+func (s *State) Record(files []File) {
+	s.Generated = make(map[string]string, len(files))
+	for _, f := range files {
+		s.Generated[f.Path] = Hash(f.Data)
+	}
+}
+
+// Modified returns the generated files under root whose content no longer
+// matches the recorded hash, in sorted order. Deleted files count as
+// modified.
+func (s State) Modified(root string) []string {
+	var out []string
+	for p, want := range s.Generated {
+		data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(p)))
+		if err != nil || Hash(data) != want {
+			out = append(out, p)
+		}
+	}
+	slices.Sort(out)
+	return out
 }
 
 // File renders s as a File.

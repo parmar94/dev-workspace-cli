@@ -16,20 +16,11 @@ import (
 )
 
 type initOpts struct {
-	template  string
-	name      string
-	baseImage string
-	langs     []string
-	agents    []string
-	tools     []string
-	sshAgent  bool
-	sshMode   string
-	gitConfig bool
-	guard     bool
-	ports     []int
-	yes       bool
-	dryRun    bool
-	force     bool
+	selectionFlags
+	template string
+	yes      bool
+	dryRun   bool
+	force    bool
 }
 
 // selection is the merged result of config defaults, template, flags and
@@ -60,16 +51,7 @@ replaces the list below it rather than adding to it.`,
 	}
 	f := cmd.Flags()
 	f.StringVarP(&o.template, "template", "t", "", "start from a `name`d template (see dws templates list)")
-	f.StringVar(&o.name, "name", "", "container name (default: directory name)")
-	f.StringVar(&o.baseImage, "base-image", "", "base image (default from config)")
-	f.StringSliceVarP(&o.langs, "lang", "l", nil, "languages, comma-separated")
-	f.StringSliceVarP(&o.agents, "agent", "a", nil, "AI agents, comma-separated (claude, codex)")
-	f.StringSliceVar(&o.tools, "tool", nil, "extra tools, comma-separated")
-	f.BoolVar(&o.sshAgent, "ssh-agent", false, "forward the host SSH agent")
-	f.StringVar(&o.sshMode, "ssh-mode", "", "how to forward the SSH agent: mac or linux (default: detect host)")
-	f.BoolVar(&o.gitConfig, "git-config", false, "mount the host ~/.gitconfig and include it")
-	f.BoolVar(&o.guard, "agent-guard", true, "deny agents access to credential files and commands of selected tools (use --agent-guard=false to skip)")
-	f.IntSliceVarP(&o.ports, "port", "p", nil, "ports to forward, comma-separated")
+	o.register(f)
 	f.BoolVarP(&o.yes, "yes", "y", false, "don't prompt; use defaults, template and flags")
 	f.BoolVar(&o.dryRun, "dry-run", false, "print the files instead of writing them")
 	f.BoolVar(&o.force, "force", false, "overwrite an existing .devcontainer")
@@ -171,45 +153,8 @@ func buildSelection(cmd *cobra.Command, cfg *config.Config, tmpls map[string]reg
 		}
 	}
 
-	changed := cmd.Flags().Changed
-	if changed("name") {
-		sel.Name = o.name
-	}
-	if changed("base-image") {
-		sel.BaseImage = o.baseImage
-	}
-	if changed("lang") {
-		sel.Languages = o.langs
-	}
-	if changed("agent") {
-		sel.Agents = o.agents
-	}
-	if changed("tool") {
-		sel.Tools = o.tools
-	}
-	if changed("ssh-mode") {
-		m := devcontainer.SSHMode(o.sshMode)
-		if m != devcontainer.SSHMac && m != devcontainer.SSHLinux {
-			return sel, fmt.Errorf("--ssh-mode must be mac or linux, got %q", o.sshMode)
-		}
-		sel.SSH = m
-	}
-	if changed("ssh-agent") {
-		switch {
-		case !o.sshAgent:
-			sel.SSH = devcontainer.SSHNone
-		case sel.SSH == devcontainer.SSHNone:
-			sel.SSH = hostSSHMode()
-		}
-	}
-	if changed("git-config") {
-		sel.GitConfig = o.gitConfig
-	}
-	if changed("agent-guard") {
-		sel.AgentGuard = o.guard
-	}
-	if changed("port") {
-		sel.Ports = o.ports
+	if err := o.apply(cmd.Flags().Changed, &sel); err != nil {
+		return sel, err
 	}
 	return sel, nil
 }
@@ -244,6 +189,7 @@ func render(sel selection, reg *registry.Registry) ([]devcontainer.File, []strin
 	if err != nil {
 		return nil, nil, err
 	}
+	sel.Record(files)
 	state, err := sel.File()
 	if err != nil {
 		return nil, nil, err
