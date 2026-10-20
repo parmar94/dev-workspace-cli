@@ -61,7 +61,7 @@ func CheckGitHubToken(ctx context.Context, client *http.Client, token string) (G
 // up as git's credential helper.
 func InstallGitHub(ctx context.Context, ctr *Container, t GitHubToken) error {
 	if _, err := ctr.Exec(ctx, nil, "gh", "--version"); err != nil {
-		return fmt.Errorf("gh is not installed in the container (add it with `dws init --tool gh --force` and rebuild): %w", err)
+		return fmt.Errorf("gh is not installed in the container (add it with `dws update --add-tool gh --rebuild`): %w", err)
 	}
 	if _, err := ctr.Exec(ctx, strings.NewReader(t.Value+"\n"), "gh", "auth", "login", "--with-token"); err != nil {
 		return err

@@ -114,7 +114,7 @@ func (a *app) runInit(cmd *cobra.Command, dir string, o *initOpts) error {
 	for _, f := range files {
 		fmt.Fprintf(errOut, "Wrote %s\n", filepath.Join(dir, f.Path))
 	}
-	fmt.Fprintf(errOut, "\nNext: open the folder in VS Code and run \"Reopen in Container\", or\n  devcontainer up --workspace-folder %s\n", dir)
+	fmt.Fprintf(errOut, "\nNext: start it with `dws rebuild %s`, or open the folder in VS Code and run \"Reopen in Container\".\n", dir)
 	return nil
 }
 
