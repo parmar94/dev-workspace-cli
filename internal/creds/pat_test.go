@@ -64,7 +64,8 @@ func TestPATTemplateURL(t *testing.T) {
 	if !strings.Contains(q.Get("description"), "acme/api") {
 		t.Errorf("description = %q", q.Get("description"))
 	}
-	if tmpl.URL() != tmpl.URL() {
+	// Map iteration is random, so build twice to check the order is fixed.
+	if first, second := tmpl.URL(), tmpl.URL(); first != second {
 		t.Error("URL not deterministic")
 	}
 

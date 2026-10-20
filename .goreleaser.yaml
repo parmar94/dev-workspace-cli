@@ -1,0 +1,53 @@
+version: 2
+
+project_name: dws
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: dws
+    main: ./cmd/dws
+    binary: dws
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/parmar94/dev-workspace-cli/internal/cli.version=v{{ .Version }}
+      - -X github.com/parmar94/dev-workspace-cli/internal/cli.commit={{ .ShortCommit }}
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+      - docs/**/*
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^Merge "
+
+release:
+  # Review the generated notes before publishing.
+  draft: true
+  footer: |
+    Install: download the archive for your platform, verify it against `checksums.txt`, and put `dws` on your PATH,
+    or run `go install github.com/parmar94/dev-workspace-cli/cmd/dws@{{ .Tag }}`.
+    See [CHANGELOG.md](https://github.com/parmar94/dev-workspace-cli/blob/{{ .Tag }}/CHANGELOG.md) for details.

@@ -226,7 +226,7 @@ func printFiles(w io.Writer, files []devcontainer.File) {
 			fmt.Fprintln(w)
 		}
 		fmt.Fprintf(w, "# --- %s\n", f.Path)
-		w.Write(f.Data)
+		_, _ = w.Write(f.Data)
 	}
 }
 

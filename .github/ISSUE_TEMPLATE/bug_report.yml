@@ -1,0 +1,44 @@
+name: Bug report
+description: Something doesn't work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! For security issues, please use **Security → Report a vulnerability** instead.
+        **Don't paste tokens, keys or credential files.**
+  - type: input
+    id: version
+    attributes:
+      label: dws version
+      description: Output of `dws version`
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      description: OS, Docker runtime (Docker Desktop, OrbStack, Engine…), and editor or devcontainer CLI version
+      placeholder: macOS 26, Docker Desktop 4.50, devcontainer CLI 0.80
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command and output
+      description: The exact command you ran and its full output.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: Generated files (optional)
+      description: Relevant parts of `.devcontainer/devcontainer.json`, `dws.yaml` or your global config (`dws config show`), with anything sensitive removed.
+      render: yaml

@@ -116,9 +116,9 @@ func TestGitHub(t *testing.T) {
 		switch r.Header.Get("Authorization") {
 		case "Bearer github_pat_good":
 			w.Header().Set("github-authentication-token-expiration", expiry)
-			w.Write([]byte(`{"login":"octo"}`))
+			_, _ = w.Write([]byte(`{"login":"octo"}`))
 		case "Bearer github_pat_noexp":
-			w.Write([]byte(`{"login":"octo"}`))
+			_, _ = w.Write([]byte(`{"login":"octo"}`))
 		default:
 			w.WriteHeader(http.StatusUnauthorized)
 		}
