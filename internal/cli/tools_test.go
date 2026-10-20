@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -84,6 +85,41 @@ func TestToolsAddErrors(t *testing.T) {
 				t.Error("want error")
 			}
 		})
+	}
+}
+
+func TestListJSON(t *testing.T) {
+	out, _, err := run(t, "favorites: [gh]\n", "tools", "list", "--json", "--kind", "tool")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var tools []toolJSON
+	if err := json.Unmarshal([]byte(out), &tools); err != nil {
+		t.Fatalf("invalid JSON: %v\n%s", err, out)
+	}
+	var gh *toolJSON
+	for i := range tools {
+		if tools[i].Kind != "tool" {
+			t.Errorf("kind filter leaked %s", tools[i].Name)
+		}
+		if tools[i].Name == "gh" {
+			gh = &tools[i]
+		}
+	}
+	if gh == nil || !gh.Favorite || gh.Install != "feature" || !slices.Contains(gh.Guard.Commands, "gh auth token") {
+		t.Errorf("gh = %+v", gh)
+	}
+
+	out, _, err = run(t, "", "templates", "list", "--json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var tmpls []struct {
+		Name      string   `json:"name"`
+		Languages []string `json:"languages"`
+	}
+	if err := json.Unmarshal([]byte(out), &tmpls); err != nil || len(tmpls) == 0 {
+		t.Fatalf("templates JSON: %v\n%s", err, out)
 	}
 }
 

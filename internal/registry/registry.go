@@ -44,11 +44,11 @@ type Item struct {
 // when this entry is installed. It is a guardrail, not a security boundary.
 type Guard struct {
 	// Paths are globs agents may not read, e.g. "~/.aws/**".
-	Paths []string `yaml:"paths,omitempty"`
+	Paths []string `yaml:"paths,omitempty" json:"paths,omitempty"`
 	// Commands are command prefixes agents may not run, e.g. "gh auth token".
-	Commands []string `yaml:"commands,omitempty"`
+	Commands []string `yaml:"commands,omitempty" json:"commands,omitempty"`
 	// Env are environment variable names or globs hidden from agent shells.
-	Env []string `yaml:"env,omitempty"`
+	Env []string `yaml:"env,omitempty" json:"env,omitempty"`
 }
 
 // IsZero reports whether g has no rules. yaml uses it for omitempty.

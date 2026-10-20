@@ -16,32 +16,50 @@ func newTemplatesCmd(a *app) *cobra.Command {
 		Aliases: []string{"template"},
 		Short:   "List and show templates (add your own under `templates:` in the config)",
 	}
-	cmd.AddCommand(
-		&cobra.Command{
-			Use:   "list",
-			Short: "List templates",
-			Args:  cobra.NoArgs,
-			RunE: func(cmd *cobra.Command, _ []string) error {
-				cfg, _, err := a.loadConfig()
-				if err != nil {
-					return err
+	var asJSON bool
+	list := &cobra.Command{
+		Use:   "list",
+		Short: "List templates",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			cfg, _, err := a.loadConfig()
+			if err != nil {
+				return err
+			}
+			tmpls, err := cfg.EffectiveTemplates()
+			if err != nil {
+				return err
+			}
+			source := func(n string) string {
+				if _, ok := cfg.Templates[n]; ok {
+					return "custom"
 				}
-				tmpls, err := cfg.EffectiveTemplates()
-				if err != nil {
-					return err
+				return "built-in"
+			}
+			if asJSON {
+				type templateJSON struct {
+					Name   string `json:"name"`
+					Source string `json:"source"`
+					registry.Template
 				}
-				w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-				fmt.Fprintln(w, "NAME\tSOURCE\tDESCRIPTION")
+				out := []templateJSON{}
 				for _, n := range sortedKeys(tmpls) {
-					src := "built-in"
-					if _, ok := cfg.Templates[n]; ok {
-						src = "custom"
-					}
-					fmt.Fprintf(w, "%s\t%s\t%s\n", n, src, tmpls[n].Description)
+					out = append(out, templateJSON{n, source(n), tmpls[n]})
 				}
-				return w.Flush()
-			},
+				return writeJSON(cmd.OutOrStdout(), out)
+			}
+			w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
+			fmt.Fprintln(w, "NAME\tSOURCE\tDESCRIPTION")
+			for _, n := range sortedKeys(tmpls) {
+				fmt.Fprintf(w, "%s\t%s\t%s\n", n, source(n), tmpls[n].Description)
+			}
+			return w.Flush()
 		},
+	}
+	list.Flags().BoolVar(&asJSON, "json", false, "print JSON (for scripts and agents)")
+
+	cmd.AddCommand(
+		list,
 		&cobra.Command{
 			Use:   "show <name>",
 			Short: "Print a template",

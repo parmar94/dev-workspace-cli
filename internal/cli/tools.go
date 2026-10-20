@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"slices"
 	"strings"
@@ -25,8 +27,21 @@ func newToolsCmd(a *app) *cobra.Command {
 	return cmd
 }
 
+// toolJSON is the --json shape of one registry entry.
+type toolJSON struct {
+	Kind        registry.Kind  `json:"kind"`
+	Name        string         `json:"name"`
+	Description string         `json:"description,omitempty"`
+	Install     string         `json:"install"`
+	Requires    []string       `json:"requires,omitempty"`
+	Favorite    bool           `json:"favorite"`
+	Source      string         `json:"source"`
+	Guard       registry.Guard `json:"guard,omitzero"`
+}
+
 func newToolsListCmd(a *app) *cobra.Command {
 	var kind string
+	var asJSON bool
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List registry entries",
@@ -53,6 +68,25 @@ func newToolsListCmd(a *app) *cobra.Command {
 				return err
 			}
 
+			if asJSON {
+				out := []toolJSON{}
+				for _, k := range kinds {
+					for _, n := range reg.Names(k) {
+						e, _ := reg.Lookup(n)
+						install := "feature"
+						if e.Script != "" {
+							install = "script"
+						}
+						out = append(out, toolJSON{
+							Kind: k, Name: n, Description: e.Description, Install: install,
+							Requires: e.Requires, Favorite: cfg.IsFavorite(n),
+							Source: source(cfg, builtin, n), Guard: e.Guard,
+						})
+					}
+				}
+				return writeJSON(cmd.OutOrStdout(), out)
+			}
+
 			w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
 			fmt.Fprintln(w, "KIND\tNAME\tINSTALL\tSOURCE\tDESCRIPTION")
 			for _, k := range kinds {
@@ -76,7 +110,14 @@ func newToolsListCmd(a *app) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&kind, "kind", "k", "", "only show one kind: language, agent or tool")
+	cmd.Flags().BoolVar(&asJSON, "json", false, "print JSON (for scripts and agents)")
 	return cmd
+}
+
+func writeJSON(w io.Writer, v any) error {
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	return enc.Encode(v)
 }
 
 func source(cfg *config.Config, builtin *registry.Registry, name string) string {

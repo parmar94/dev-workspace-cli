@@ -13,12 +13,12 @@ import (
 
 // Template is a named preset of languages, agents and tools.
 type Template struct {
-	Description string   `yaml:"description,omitempty"`
-	Languages   []string `yaml:"languages,omitempty"`
-	Agents      []string `yaml:"agents,omitempty"`
-	Tools       []string `yaml:"tools,omitempty"`
-	SSHAgent    *bool    `yaml:"ssh_agent,omitempty"`
-	BaseImage   string   `yaml:"base_image,omitempty"`
+	Description string   `yaml:"description,omitempty" json:"description,omitempty"`
+	Languages   []string `yaml:"languages,omitempty" json:"languages"`
+	Agents      []string `yaml:"agents,omitempty" json:"agents"`
+	Tools       []string `yaml:"tools,omitempty" json:"tools"`
+	SSHAgent    *bool    `yaml:"ssh_agent,omitempty" json:"ssh_agent,omitempty"`
+	BaseImage   string   `yaml:"base_image,omitempty" json:"base_image,omitempty"`
 }
 
 // BuiltinTemplates returns the templates embedded in the binary, keyed by
