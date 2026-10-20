@@ -1,0 +1,33 @@
+# dws global config. Run `dws config path` to find this file.
+
+# Starting selections for `dws init`. Templates and flags override them.
+defaults:
+  languages: []
+  agents: [claude]
+  tools: [gh]
+  ssh_agent: true
+  base_image: mcr.microsoft.com/devcontainers/base:ubuntu
+  remote_user: vscode
+
+# Entries listed first and pre-checked in interactive prompts.
+favorites: [go, claude, gh, jq]
+
+# Add your own entries or override built-in ones (see `dws tools list`).
+# Each entry needs either a dev container `feature` or a `script`.
+# registry:
+#   tools:
+#     httpie:
+#       description: HTTP client
+#       script: sudo apt-get update && sudo apt-get install -y httpie
+
+# Built-in entries to hide.
+# removed: [fzf]
+
+# Your own presets, used with `dws init --template <name>`.
+# templates:
+#   my-go:
+#     description: My usual Go setup
+#     languages: [go]
+#     agents: [claude]
+#     tools: [gh, jq, ripgrep]
+#     ssh_agent: true
