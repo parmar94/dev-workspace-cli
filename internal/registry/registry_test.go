@@ -118,6 +118,27 @@ func TestMergeReplacesAcrossSections(t *testing.T) {
 	}
 }
 
+func TestGuardMerge(t *testing.T) {
+	r, err := Builtin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	aws, _ := r.Lookup("aws-cli")
+	gh, _ := r.Lookup("gh")
+	g := BaseGuard.Merge(aws.Guard, gh.Guard, aws.Guard)
+	for _, want := range []string{"~/.ssh/**", "~/.aws/**", "~/.config/gh/**"} {
+		if !slices.Contains(g.Paths, want) {
+			t.Errorf("paths missing %s: %v", want, g.Paths)
+		}
+	}
+	if n := len(g.Commands); n != len(BaseGuard.Commands)+len(aws.Guard.Commands)+len(gh.Guard.Commands) {
+		t.Errorf("commands not de-duplicated: %v", g.Commands)
+	}
+	if (Guard{}).IsZero() != true || g.IsZero() {
+		t.Error("IsZero wrong")
+	}
+}
+
 func TestValidate(t *testing.T) {
 	r := &Registry{
 		Languages: map[string]Item{"x": {Feature: "f"}},

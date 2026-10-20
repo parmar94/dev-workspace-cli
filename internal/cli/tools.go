@@ -97,6 +97,7 @@ func newToolsAddCmd(a *app) *cobra.Command {
 		kind, feature, script, scriptFile, desc string
 		options, env                            []string
 		requires, mounts                        []string
+		guard                                   registry.Guard
 		favorite                                bool
 	)
 	cmd := &cobra.Command{
@@ -135,6 +136,7 @@ In --mount, {{home}} expands to the remote user's home directory.
 				Script:      script,
 				Requires:    requires,
 				Mounts:      mounts,
+				Guard:       guard,
 			}
 			if item.Options, err = parseKV[any](options, "--option"); err != nil {
 				return err
@@ -173,6 +175,9 @@ In --mount, {{home}} expands to the remote user's home directory.
 	f.StringSliceVar(&requires, "requires", nil, "entries this one needs, comma-separated")
 	f.StringArrayVar(&mounts, "mount", nil, "mount spec (repeatable)")
 	f.StringArrayVar(&env, "env", nil, "container env KEY=value (repeatable)")
+	f.StringArrayVar(&guard.Paths, "guard-path", nil, "credential path glob agents may not read, e.g. ~/.mytool/** (repeatable)")
+	f.StringArrayVar(&guard.Commands, "guard-cmd", nil, "command prefix agents may not run (repeatable)")
+	f.StringArrayVar(&guard.Env, "guard-env", nil, "env var name or glob hidden from agent shells (repeatable)")
 	f.BoolVar(&favorite, "favorite", false, "also add to favorites")
 	return cmd
 }

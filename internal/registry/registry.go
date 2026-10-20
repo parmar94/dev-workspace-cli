@@ -37,6 +37,49 @@ type Item struct {
 	Requires    []string          `yaml:"requires,omitempty"`
 	Mounts      []string          `yaml:"mounts,omitempty"`
 	Env         map[string]string `yaml:"env,omitempty"`
+	Guard       Guard             `yaml:"guard,omitempty"`
+}
+
+// Guard lists credential paths and commands that AI agents should be denied
+// when this entry is installed. It is a guardrail, not a security boundary.
+type Guard struct {
+	// Paths are globs agents may not read, e.g. "~/.aws/**".
+	Paths []string `yaml:"paths,omitempty"`
+	// Commands are command prefixes agents may not run, e.g. "gh auth token".
+	Commands []string `yaml:"commands,omitempty"`
+	// Env are environment variable names or globs hidden from agent shells.
+	Env []string `yaml:"env,omitempty"`
+}
+
+// IsZero reports whether g has no rules. yaml uses it for omitempty.
+func (g Guard) IsZero() bool {
+	return len(g.Paths) == 0 && len(g.Commands) == 0 && len(g.Env) == 0
+}
+
+// BaseGuard applies whenever agent guard rules are generated.
+var BaseGuard = Guard{
+	Paths:    []string{"~/.ssh/**", "**/.env", "**/.env.*"},
+	Commands: []string{"printenv", "env"},
+}
+
+// Merge returns the union of g and others, keeping first-seen order.
+func (g Guard) Merge(others ...Guard) Guard {
+	out := Guard{}
+	for _, x := range append([]Guard{g}, others...) {
+		out.Paths = appendNew(out.Paths, x.Paths...)
+		out.Commands = appendNew(out.Commands, x.Commands...)
+		out.Env = appendNew(out.Env, x.Env...)
+	}
+	return out
+}
+
+func appendNew(s []string, vs ...string) []string {
+	for _, v := range vs {
+		if !slices.Contains(s, v) {
+			s = append(s, v)
+		}
+	}
+	return s
 }
 
 // Entry is an Item together with its name and kind.

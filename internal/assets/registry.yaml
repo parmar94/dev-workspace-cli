@@ -3,6 +3,8 @@
 # or a `script` run from post-create.sh as the remote user.
 # In mounts, {{home}} expands to the remote user's home directory. Agent
 # volumes are shared across projects so you only log in once.
+# `guard` lists credential paths, commands and env vars that AI agents are
+# denied when the entry is installed (see --agent-guard).
 
 languages:
   go:
@@ -45,18 +47,33 @@ tools:
   gh:
     description: GitHub CLI
     feature: ghcr.io/devcontainers/features/github-cli:1
+    guard:
+      paths: ["~/.config/gh/**"]
+      commands: ["gh auth token"]
+      env: [GH_TOKEN, GITHUB_TOKEN]
   docker-in-docker:
     description: Docker engine inside the container
     feature: ghcr.io/devcontainers/features/docker-in-docker:2
+    guard:
+      paths: ["~/.docker/config.json"]
   aws-cli:
     description: AWS CLI v2
     feature: ghcr.io/devcontainers/features/aws-cli:1
+    guard:
+      paths: ["~/.aws/**"]
+      commands: ["aws configure export-credentials", "aws configure get", "aws sts get-session-token"]
+      env: ["AWS_*"]
   terraform:
     description: Terraform
     feature: ghcr.io/devcontainers/features/terraform:1
+    guard:
+      paths: ["~/.terraform.d/credentials.tfrc.json"]
+      env: ["TF_TOKEN_*"]
   kubectl:
     description: kubectl, helm and minikube
     feature: ghcr.io/devcontainers/features/kubectl-helm-minikube:1
+    guard:
+      paths: ["~/.kube/**"]
   jq:
     description: JSON processor
     script: sudo apt-get update && sudo apt-get install -y --no-install-recommends jq
