@@ -45,6 +45,17 @@ func (s State) File() (File, error) {
 	return File{Path: StateFile, Data: buf.Bytes()}, nil
 }
 
+// LoadState reads StateFile from the project at root.
+func LoadState(root string) (State, error) {
+	var s State
+	data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(StateFile)))
+	if err != nil {
+		return s, err
+	}
+	err = yaml.Unmarshal(data, &s)
+	return s, err
+}
+
 // Write writes files under root. If root already has a .devcontainer
 // directory it fails unless force is set, in which case the generated
 // scripts directory is replaced and other files are overwritten.
