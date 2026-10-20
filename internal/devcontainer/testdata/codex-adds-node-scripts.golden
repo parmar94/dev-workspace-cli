@@ -26,6 +26,9 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+echo "==> Fixing volume ownership"
+sudo chown -R "$(id -u):$(id -g)" /home/vscode/.codex
+
 echo "==> Installing codex"
 bash ./codex.sh
 

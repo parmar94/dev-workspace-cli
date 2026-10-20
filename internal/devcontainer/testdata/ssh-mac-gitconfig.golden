@@ -15,6 +15,7 @@
     "SSH_AUTH_SOCK": "/run/host-services/ssh-auth.sock"
   },
   "postCreateCommand": "bash .devcontainer/scripts/post-create.sh",
+  "postStartCommand": "sudo chown \"$(id -u)\" /run/host-services/ssh-auth.sock",
   "remoteUser": "vscode"
 }
 === .devcontainer/scripts/post-create.sh (exec)
