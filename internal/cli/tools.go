@@ -37,6 +37,7 @@ type toolJSON struct {
 	Favorite    bool           `json:"favorite"`
 	Source      string         `json:"source"`
 	Guard       registry.Guard `json:"guard,omitzero"`
+	Domains     []string       `json:"domains,omitempty"`
 }
 
 func newToolsListCmd(a *app) *cobra.Command {
@@ -80,7 +81,7 @@ func newToolsListCmd(a *app) *cobra.Command {
 						out = append(out, toolJSON{
 							Kind: k, Name: n, Description: e.Description, Install: install,
 							Requires: e.Requires, Favorite: cfg.IsFavorite(n),
-							Source: source(cfg, builtin, n), Guard: e.Guard,
+							Source: source(cfg, builtin, n), Guard: e.Guard, Domains: e.Domains,
 						})
 					}
 				}
@@ -137,7 +138,7 @@ func newToolsAddCmd(a *app) *cobra.Command {
 	var (
 		kind, feature, script, scriptFile, desc string
 		options, env                            []string
-		requires, mounts                        []string
+		requires, mounts, domains               []string
 		guard                                   registry.Guard
 		favorite                                bool
 	)
@@ -178,6 +179,7 @@ In --mount, {{home}} expands to the remote user's home directory.
 				Requires:    requires,
 				Mounts:      mounts,
 				Guard:       guard,
+				Domains:     domains,
 			}
 			if item.Options, err = parseKV[any](options, "--option"); err != nil {
 				return err
@@ -219,6 +221,7 @@ In --mount, {{home}} expands to the remote user's home directory.
 	f.StringArrayVar(&guard.Paths, "guard-path", nil, "credential path glob agents may not read, e.g. ~/.mytool/** (repeatable)")
 	f.StringArrayVar(&guard.Commands, "guard-cmd", nil, "command prefix agents may not run (repeatable)")
 	f.StringArrayVar(&guard.Env, "guard-env", nil, "env var name or glob hidden from agent shells (repeatable)")
+	f.StringArrayVar(&domains, "domain", nil, "network host this entry needs, pre-allowed in the Claude sandbox (repeatable)")
 	f.BoolVar(&favorite, "favorite", false, "also add to favorites")
 	return cmd
 }

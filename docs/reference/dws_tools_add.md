@@ -28,6 +28,7 @@ dws tools add <name> [flags]
 
 ```
   -d, --description string       short description
+      --domain stringArray       network host this entry needs, pre-allowed in the Claude sandbox (repeatable)
       --env stringArray          container env KEY=value (repeatable)
       --favorite                 also add to favorites
       --feature string           dev container feature reference

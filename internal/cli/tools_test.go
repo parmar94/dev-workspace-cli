@@ -23,7 +23,7 @@ func TestToolsAddRemove(t *testing.T) {
 
 	must("tools", "add", "httpie", "-d", "HTTP client", "--script", "apt install httpie", "--favorite")
 	must("tools", "add", "go", "--kind", "language", "--feature", "ghcr.io/devcontainers/features/go:1", "--option", "version=1.24")
-	must("tools", "add", "gemini", "--kind", "agent", "--requires", "node", "--script", "npm i -g gemini", "--env", "A=b")
+	must("tools", "add", "gemini", "--kind", "agent", "--requires", "node", "--script", "npm i -g gemini", "--env", "A=b", "--domain", "example.com")
 
 	out := must("tools", "list")
 	for _, want := range []string{"★ httpie", "custom", "override", "gemini", "script (needs node)"} {
@@ -37,6 +37,9 @@ func TestToolsAddRemove(t *testing.T) {
 
 	// The new entries are usable from init.
 	dry := must("init", t.TempDir(), "-y", "--dry-run", "--lang", "go", "--agent", "gemini", "--tool", "httpie")
+	if !strings.Contains(must("init", t.TempDir(), "-y", "--dry-run", "--agent", "claude,gemini", "--agent-sandbox"), `"example.com"`) {
+		t.Error("custom domain not in sandbox allowlist")
+	}
 	for _, want := range []string{`"version": "1.24"`, "scripts/gemini.sh", "apt install httpie", `"A": "b"`} {
 		if !strings.Contains(dry, want) {
 			t.Errorf("init output missing %q", want)
