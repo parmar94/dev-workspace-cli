@@ -1,6 +1,8 @@
 # Built-in catalog. Names must be unique across languages, agents and tools.
 # Each entry has either a dev container `feature` (with optional `options`)
 # or a `script` run from post-create.sh as the remote user.
+# In mounts, {{home}} expands to the remote user's home directory. Agent
+# volumes are shared across projects so you only log in once.
 
 languages:
   go:
@@ -31,13 +33,13 @@ agents:
     feature: ghcr.io/anthropics/devcontainer-features/claude-code:1.0
     requires: [node]
     mounts:
-      - source=dws-claude-${devcontainerId},target=/home/vscode/.claude,type=volume
+      - source=dws-claude,target={{home}}/.claude,type=volume
   codex:
     description: OpenAI Codex CLI
     script: npm install -g @openai/codex
     requires: [node]
     mounts:
-      - source=dws-codex-${devcontainerId},target=/home/vscode/.codex,type=volume
+      - source=dws-codex,target={{home}}/.codex,type=volume
 
 tools:
   gh:

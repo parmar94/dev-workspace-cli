@@ -1,0 +1,23 @@
+=== .devcontainer/devcontainer.json
+{
+  "name": "ssh-linux",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    }
+  },
+  "overrideFeatureInstallOrder": [
+    "ghcr.io/devcontainers/features/node",
+    "ghcr.io/anthropics/devcontainer-features/claude-code"
+  ],
+  "mounts": [
+    "source=dws-claude,target=/root/.claude,type=volume",
+    "source=${localEnv:SSH_AUTH_SOCK},target=/ssh-agent,type=bind"
+  ],
+  "containerEnv": {
+    "SSH_AUTH_SOCK": "/ssh-agent"
+  },
+  "remoteUser": "root"
+}

@@ -126,13 +126,14 @@ func TestValidate(t *testing.T) {
 			"both": {Feature: "f", Script: "s"},
 			"none": {},
 			"dep":  {Script: "s", Requires: []string{"ghost"}},
+			"../x": {Script: "s"},
 		},
 	}
 	err := r.Validate()
 	if err == nil {
 		t.Fatal("want error")
 	}
-	for _, want := range []string{`"x" is defined as both`, `"both": set exactly one`, `"none": set exactly one`, `unknown entry "ghost"`} {
+	for _, want := range []string{`"x" is defined as both`, `"both": set exactly one`, `"none": set exactly one`, `unknown entry "ghost"`, `"../x": names may only`} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error missing %q:\n%v", want, err)
 		}

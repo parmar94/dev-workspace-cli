@@ -1,0 +1,11 @@
+=== .devcontainer/devcontainer.json
+{
+  "name": "go-single",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/go:1": {
+      "version": "latest"
+    }
+  },
+  "remoteUser": "vscode"
+}

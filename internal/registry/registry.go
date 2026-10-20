@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -118,7 +119,10 @@ func (r *Registry) Names(kind Kind) []string {
 	return slices.Sorted(maps.Keys(r.Section(kind)))
 }
 
-// Validate checks that names are unique, each item has exactly one install
+// Names become script file names, so keep them simple.
+var validName = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
+
+// Validate checks that names are well-formed and unique, each item has exactly one install
 // method, and every requirement exists.
 func (r *Registry) Validate() error {
 	var errs []error
@@ -130,6 +134,9 @@ func (r *Registry) Validate() error {
 				errs = append(errs, fmt.Errorf("%q is defined as both %s and %s", name, prev, k))
 			}
 			seen[name] = k
+			if !validName.MatchString(name) {
+				errs = append(errs, fmt.Errorf("%s %q: names may only use a-z, 0-9, '.', '_' and '-'", k, name))
+			}
 			if (item.Feature == "") == (item.Script == "") {
 				errs = append(errs, fmt.Errorf("%s %q: set exactly one of feature or script", k, name))
 			}
