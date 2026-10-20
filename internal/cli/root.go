@@ -41,6 +41,7 @@ func newRootCmd() *cobra.Command {
 		Short:        "Set up and manage project workspaces in dev containers",
 		SilenceUsage: true,
 	}
+	root.Version, _ = buildVersion()
 	root.PersistentFlags().StringVar(&a.configPath, "config", "", "global config file (default ~/.config/dws/config.yaml, or $DWS_CONFIG)")
 
 	root.AddCommand(
