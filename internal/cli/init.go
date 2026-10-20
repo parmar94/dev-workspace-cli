@@ -92,12 +92,19 @@ func (a *app) runInit(cmd *cobra.Command, dir string, o *initOpts) error {
 		return err
 	}
 
+	interactive := !o.yes && isInteractive()
+	if interactive && !cmd.Flags().Changed("template") {
+		if o.template, err = promptTemplate(tmpls); err != nil {
+			return err
+		}
+	}
+
 	sel, err := buildSelection(cmd, cfg, tmpls, o, abs)
 	if err != nil {
 		return err
 	}
 
-	if !o.yes && isInteractive() {
+	if interactive {
 		if err := promptSelection(&sel, cfg, reg, cmd.Flags().Changed); err != nil {
 			return err
 		}
