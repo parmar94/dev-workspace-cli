@@ -2,6 +2,7 @@
 package config
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -77,11 +78,13 @@ func Load(path string) (*Config, error) {
 // Save writes c to path, creating parent directories. Comments in an
 // existing file are not preserved.
 func (c *Config) Save(path string) error {
-	data, err := yaml.Marshal(c)
-	if err != nil {
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(c); err != nil {
 		return err
 	}
-	return writeFile(path, data)
+	return writeFile(path, buf.Bytes())
 }
 
 // WriteStarter writes the commented starter config to path. It fails if the
