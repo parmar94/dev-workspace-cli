@@ -11,6 +11,7 @@ func TestWrite(t *testing.T) {
 	files := []File{
 		{Path: ".devcontainer/devcontainer.json", Data: []byte("{}\n")},
 		{Path: ".devcontainer/scripts/a.sh", Data: []byte("echo a\n"), Exec: true},
+		{Path: ".devcontainer/agent-policy/p.json", Data: []byte("{}\n")},
 	}
 	if err := Write(root, files, false); err != nil {
 		t.Fatal(err)
@@ -27,11 +28,13 @@ func TestWrite(t *testing.T) {
 		t.Fatal("second write without force should fail")
 	}
 
-	// Force replaces the scripts dir, so stale scripts disappear.
+	// Force replaces the generated dirs, so stale scripts and policies disappear.
 	if err := Write(root, files[:1], true); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(root, ".devcontainer/scripts/a.sh")); !os.IsNotExist(err) {
-		t.Errorf("stale script still present: %v", err)
+	for _, p := range []string{".devcontainer/scripts/a.sh", ".devcontainer/agent-policy/p.json"} {
+		if _, err := os.Stat(filepath.Join(root, p)); !os.IsNotExist(err) {
+			t.Errorf("stale %s still present: %v", p, err)
+		}
 	}
 }

@@ -58,15 +58,18 @@ func LoadState(root string) (State, error) {
 
 // Write writes files under root. If root already has a .devcontainer
 // directory it fails unless force is set, in which case the generated
-// scripts directory is replaced and other files are overwritten.
+// scripts and agent-policy directories are replaced and other files are
+// overwritten.
 func Write(root string, files []File, force bool) error {
 	dir := filepath.Join(root, Dir)
 	if _, err := os.Stat(dir); err == nil {
 		if !force {
 			return fmt.Errorf("%s already exists (use --force to overwrite)", dir)
 		}
-		if err := os.RemoveAll(filepath.Join(dir, "scripts")); err != nil {
-			return err
+		for _, sub := range []string{"scripts", path.Base(policyDir)} {
+			if err := os.RemoveAll(filepath.Join(dir, sub)); err != nil {
+				return err
+			}
 		}
 	} else if !errors.Is(err, fs.ErrNotExist) {
 		return err
