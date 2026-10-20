@@ -1,6 +1,6 @@
 ---
 name: dws-devcontainer-setup
-description: Set up a dev container for a project with the dws CLI. Picks the languages, AI agents (Claude Code, Codex) and tools from the project's files and the user's preferences, previews the result, then writes .devcontainer/. Use when the user asks to create, set up, add, or containerize a project's dev environment or dev container, or to add or change languages, tools or agents in one. Not for editing the global dws config (use dws-config) or passing credentials into a container (use dws-credentials).
+description: Set up, change or rebuild a project's dev container with the dws CLI. Picks the languages, AI agents (Claude Code, Codex) and tools from the project's files and the user's preferences, previews the result, then writes .devcontainer/. dws update changes an existing setup and dws rebuild applies it. Use when the user asks to create, set up, containerize, update, add to, remove from or rebuild a project's dev environment or dev container. Not for editing the global dws config (use dws-config) or passing credentials into a container (use dws-credentials).
 ---
 
 # Set up a dev container with dws
@@ -11,7 +11,8 @@ description: Set up a dev container for a project with the dws CLI. Picks the la
 
 - **Never run `dws init` without `--yes`.** Without it, dws opens interactive prompts that need a TTY.
 - **Always run `--dry-run` first**, show the user a summary, and write only once they agree.
-- **Never pass `--force`** unless the user explicitly agrees to overwrite an existing `.devcontainer/`.
+- **Never pass `--force`** unless the user explicitly agrees to overwrite an existing `.devcontainer/` or their hand edits.
+- **For projects that already have `.devcontainer/dws.yaml`, use `dws update`**, not `dws init`.
 - **Don't commit** the generated files unless asked.
 - **Don't add or remove registry entries without asking.** `dws tools add/remove` change the user's global config.
 
@@ -47,6 +48,7 @@ description: Set up a dev container for a project with the dws CLI. Picks the la
    - Which agents: claude, codex, both, or none. Default to the config's `defaults.agents`.
    - Extra tools beyond those detected.
    - SSH agent forwarding, for private git over SSH.
+   - If Claude is selected: the opt-in Claude sandbox (`--agent-sandbox`). It's stronger credential protection, but new network hosts prompt and `docker` can't run inside it. Respect `defaults.agent_sandbox`.
 
    If a built-in template matches closely, suggest it.
 
@@ -65,10 +67,20 @@ description: Set up a dev container for a project with the dws CLI. Picks the la
 6. **Write it.** Run the same command without `--dry-run`. If a needed language or tool isn't in the registry, see [reference.md](reference.md#missing-registry-entries).
 
 7. **Next steps for the user:**
-   - Start the container: VS Code "Reopen in Container", or `devcontainer up --workspace-folder <dir>`.
+   - Start the container: VS Code "Reopen in Container", `devcontainer up --workspace-folder <dir>`, or `dws rebuild <dir>`.
    - For cloud or GitHub credentials, they should run `dws creds …` themselves (see dws-credentials).
    - In the container, `ssh-add -l` checks SSH forwarding.
 
 ## Changing an existing setup
 
-Re-run `dws init` with the full new selection plus `--force`, after the user agrees. `--force` replaces generated files and the `scripts/` folder. The user then needs to rebuild the container.
+`dws update` starts from `.devcontainer/dws.yaml`:
+
+```sh
+dws update <dir> --dry-run --add-tool terraform --remove-agent codex   # preview; summary on stderr
+dws update <dir> --add-tool terraform --remove-agent codex             # after the user agrees
+```
+
+- Use `--add-lang/--remove-lang`, `--add-agent/--remove-agent` and `--add-tool/--remove-tool`. `--lang/--agent/--tool` replace a whole list.
+- Without change flags, `dws update` prompts on a terminal, so pass `--yes` (it regenerates with the current registry).
+- **If it reports files "edited by hand", stop and show the user.** Use `--force` only with their OK, because it discards those edits.
+- **Applying a change needs a rebuild:** `dws rebuild <dir>` (or `--rebuild` on update), which replaces the container. Ask first if the container may be in use. It keeps agent logins, but credentials passed with `dws creds` must be passed in again.

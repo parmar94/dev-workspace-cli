@@ -12,6 +12,7 @@
 | `--ssh-mode mac\|linux` | override host detection |
 | `--git-config` | mount host `~/.gitconfig` (VS Code already copies it) |
 | `--agent-guard=false` | skip agent deny rules (on by default) |
+| `--agent-sandbox` | Claude Code OS-level sandbox (opt-in; network prompts, no docker inside) |
 | `-p, --port 8080,3000` | forwardPorts |
 | `--name`, `--base-image` | container name (default: directory name), image |
 | `-y, --yes` | no prompts; **always pass this** |
@@ -19,6 +20,8 @@
 | `--force` | overwrite an existing `.devcontainer/` (needs the user's OK) |
 
 Merge order: global config `defaults` < `--template` < flags.
+
+`dws update` accepts the same flags (except `--template`), plus `--add-*/--remove-*`, `--rebuild` and `--no-cache`. `dws rebuild [dir] [--no-cache]` rebuilds with the devcontainer CLI.
 
 ## Detecting languages
 
@@ -57,6 +60,7 @@ If the project needs something that isn't in `dws tools list --json`:
    ```
 3. If the tool stores credentials, add guard rules so agents are denied access:
    `--guard-path "~/.mytool/**" --guard-cmd "mytool auth token" --guard-env "MYTOOL_TOKEN"`.
+4. If it's a language or tool that downloads packages, add its registry hosts with `--domain`, so the Claude sandbox allows them.
 
 ## Generated files
 

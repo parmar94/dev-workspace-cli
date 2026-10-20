@@ -6,6 +6,8 @@ defaults:
   agents: [claude]
   tools: [gh]
   ssh_agent: true
+  # Claude Code's OS-level sandbox for its shell commands (see docs/credentials.md).
+  agent_sandbox: false
   base_image: mcr.microsoft.com/devcontainers/base:ubuntu
   remote_user: vscode
 

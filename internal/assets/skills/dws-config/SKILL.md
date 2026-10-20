@@ -23,7 +23,7 @@ If there's no config yet, offer `dws config init`. It writes a commented starter
 | Goal | How |
 | --- | --- |
 | Change `defaults`, `favorites`, add a template | Edit the YAML file directly, which keeps the user's comments. Then run `dws tools list` to confirm it still parses and validates. |
-| Add or override a registry entry | `dws tools add <name> --kind language\|agent\|tool (--feature <ref> [--option k=v] \| --script "…") [-d desc] [--requires a,b] [--mount spec] [--env K=V] [--guard-path p] [--guard-cmd c] [--guard-env E] [--favorite]` |
+| Add or override a registry entry | `dws tools add <name> --kind language\|agent\|tool (--feature <ref> [--option k=v] \| --script "…") [-d desc] [--requires a,b] [--mount spec] [--env K=V] [--guard-path p] [--guard-cmd c] [--guard-env E] [--domain host] [--favorite]` |
 | Hide or remove an entry | `dws tools remove <name>…`. Built-ins are hidden through `removed:`. It refuses if another entry still `requires` it. |
 
 `dws tools add/remove` rewrite the file, so **comments are lost**. Tell the user before running them, or edit the YAML by hand instead. Never use `dws config edit`, because it opens an interactive editor.
@@ -36,6 +36,7 @@ defaults:
   agents: [claude]          # claude, codex
   tools: [gh]
   ssh_agent: true
+  agent_sandbox: false      # Claude Code OS-level sandbox by default
   base_image: mcr.microsoft.com/devcontainers/base:ubuntu
   remote_user: vscode       # mount targets use this user's home
 favorites: [go, claude, gh] # starred and listed first in prompts
@@ -50,7 +51,8 @@ registry:                   # custom or overriding entries; names: a-z 0-9 . _ -
       guard:                # denied to AI agents
         paths: ["~/.httpie/**"]
         commands: ["http --auth"]
-        env: ["HTTPIE_*"]
+        env: ["HTTPIE_*"]   # exact names also apply to the Claude sandbox
+      domains: [pie.dev]    # pre-allowed hosts in the Claude sandbox
 removed: [fzf]              # hide built-ins
 templates:
   my-go:
@@ -67,4 +69,6 @@ templates:
 - Each entry needs **exactly one** of `feature` or `script`. Prefer official features from https://containers.dev/features, pinned to a major version (`:1`).
 - **Never put secrets in config.** Not in `env`, not in scripts. Credentials go through `dws creds` (see dws-credentials).
 - When adding a tool that stores credentials, propose `guard` rules for its credential files, token-printing commands and env vars.
+- When adding a language or tool that downloads packages, propose `domains` for its package registries.
+- After registry changes, projects pick them up with `dws update <dir> --yes`, then `dws rebuild`.
 - A template's lists **replace** the defaults rather than adding to them, so include everything the template needs.
