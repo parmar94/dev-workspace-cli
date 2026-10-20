@@ -1,0 +1,16 @@
+=== .devcontainer/devcontainer.json
+{
+  "name": "guard-none",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/aws-cli:1": {},
+    "ghcr.io/devcontainers/features/go:1": {
+      "version": "latest"
+    }
+  },
+  "overrideFeatureInstallOrder": [
+    "ghcr.io/devcontainers/features/go",
+    "ghcr.io/devcontainers/features/aws-cli"
+  ],
+  "remoteUser": "vscode"
+}

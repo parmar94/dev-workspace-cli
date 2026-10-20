@@ -25,6 +25,7 @@ type initOpts struct {
 	sshAgent  bool
 	sshMode   string
 	gitConfig bool
+	guard     bool
 	ports     []int
 	yes       bool
 	dryRun    bool
@@ -67,6 +68,7 @@ replaces the list below it rather than adding to it.`,
 	f.BoolVar(&o.sshAgent, "ssh-agent", false, "forward the host SSH agent")
 	f.StringVar(&o.sshMode, "ssh-mode", "", "how to forward the SSH agent: mac or linux (default: detect host)")
 	f.BoolVar(&o.gitConfig, "git-config", false, "mount the host ~/.gitconfig and include it")
+	f.BoolVar(&o.guard, "agent-guard", true, "deny agents access to credential files and commands of selected tools (use --agent-guard=false to skip)")
 	f.IntSliceVarP(&o.ports, "port", "p", nil, "ports to forward, comma-separated")
 	f.BoolVarP(&o.yes, "yes", "y", false, "don't prompt; use defaults, template and flags")
 	f.BoolVar(&o.dryRun, "dry-run", false, "print the files instead of writing them")
@@ -144,6 +146,8 @@ func buildSelection(cmd *cobra.Command, cfg *config.Config, tmpls map[string]reg
 		Languages: d.Languages,
 		Agents:    d.Agents,
 		Tools:     d.Tools,
+		// On by default; only matters when an agent is selected.
+		AgentGuard: true,
 	}
 	if d.SSHAgent {
 		sel.SSH = hostSSHMode()
@@ -201,6 +205,9 @@ func buildSelection(cmd *cobra.Command, cfg *config.Config, tmpls map[string]reg
 	if changed("git-config") {
 		sel.GitConfig = o.gitConfig
 	}
+	if changed("agent-guard") {
+		sel.AgentGuard = o.guard
+	}
 	if changed("port") {
 		sel.Ports = o.ports
 	}
@@ -232,6 +239,7 @@ func render(sel selection, reg *registry.Registry) ([]devcontainer.File, []strin
 		SSH:        sel.SSH,
 		GitConfig:  sel.GitConfig,
 		Ports:      sel.Ports,
+		AgentGuard: sel.AgentGuard,
 	})
 	if err != nil {
 		return nil, nil, err

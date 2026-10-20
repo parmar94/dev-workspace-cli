@@ -28,7 +28,9 @@ type State struct {
 	Tools     []string `yaml:"tools,omitempty"`
 	SSH       SSHMode  `yaml:"ssh_agent,omitempty"`
 	GitConfig bool     `yaml:"git_config,omitempty"`
-	Ports     []int    `yaml:"ports,omitempty"`
+	// AgentGuard installs deny rules for the selected agents.
+	AgentGuard bool  `yaml:"agent_guard"`
+	Ports      []int `yaml:"ports,omitempty"`
 }
 
 // File renders s as a File.

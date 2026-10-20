@@ -115,6 +115,26 @@ func TestInitDryRunWritesNothing(t *testing.T) {
 	}
 }
 
+func TestInitAgentGuard(t *testing.T) {
+	args := []string{"init", t.TempDir(), "-y", "--dry-run", "--agent", "claude", "--tool", "aws-cli"}
+	out, _, err := run(t, "", args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"agent-policy/claude-managed-settings.json", `"Read(~/.aws/**)"`, "agent_guard: true"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("default output missing %q", want)
+		}
+	}
+	out, _, err = run(t, "", append(args, "--agent-guard=false")...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out, "agent-policy") || !strings.Contains(out, "agent_guard: false") {
+		t.Errorf("--agent-guard=false output:\n%s", out)
+	}
+}
+
 func TestInitRefusesExistingWithoutForce(t *testing.T) {
 	dir := t.TempDir()
 	if _, _, err := run(t, "", "init", dir, "-y"); err != nil {

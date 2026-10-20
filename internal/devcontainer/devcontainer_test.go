@@ -57,6 +57,18 @@ func TestRenderGolden(t *testing.T) {
 			s.GitConfig = true
 			return s
 		},
+		"guard-claude-codex-aws": func(t *testing.T) Spec {
+			s := base("guard")
+			s.Entries = resolve(t, "go", "claude", "codex", "aws-cli", "gh")
+			s.AgentGuard = true
+			return s
+		},
+		"guard-without-agents": func(t *testing.T) Spec {
+			s := base("guard-none")
+			s.Entries = resolve(t, "go", "aws-cli")
+			s.AgentGuard = true
+			return s
+		},
 		"ssh-linux-root": func(t *testing.T) Spec {
 			s := base("ssh-linux")
 			s.RemoteUser = "root"

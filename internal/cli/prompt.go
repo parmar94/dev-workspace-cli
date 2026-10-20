@@ -97,6 +97,15 @@ func promptSelection(sel *selection, cfg *config.Config, reg *registry.Registry,
 			Value(&gitCfg))
 	}
 
+	guard := sel.AgentGuard
+	askGuard := !changed("agent-guard") && (len(sel.Agents) > 0 || !changed("agent"))
+	if askGuard {
+		fields = append(fields, huh.NewConfirm().
+			Title("Install agent guard rules?").
+			Description("Denies AI agents reading credential files and running credential commands of the selected tools. A guardrail, not a security boundary.").
+			Value(&guard))
+	}
+
 	if len(fields) == 0 {
 		return nil
 	}
@@ -117,6 +126,9 @@ func promptSelection(sel *selection, cfg *config.Config, reg *registry.Registry,
 		}
 	}
 	sel.GitConfig = gitCfg
+	if askGuard {
+		sel.AgentGuard = guard
+	}
 	return nil
 }
 
