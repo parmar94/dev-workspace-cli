@@ -59,7 +59,7 @@ replaces the list below it rather than adding to it.`,
 		},
 	}
 	f := cmd.Flags()
-	f.StringVarP(&o.template, "template", "t", "", "start from a template (see `dws templates list`)")
+	f.StringVarP(&o.template, "template", "t", "", "start from a `name`d template (see dws templates list)")
 	f.StringVar(&o.name, "name", "", "container name (default: directory name)")
 	f.StringVar(&o.baseImage, "base-image", "", "base image (default from config)")
 	f.StringSliceVarP(&o.langs, "lang", "l", nil, "languages, comma-separated")

@@ -51,6 +51,7 @@ func newRootCmd() *cobra.Command {
 		newTemplatesCmd(a),
 		newCredsCmd(),
 		newSkillsCmd(),
+		newGenDocsCmd(),
 	)
 
 	return root
