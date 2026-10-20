@@ -37,6 +37,7 @@ Then open the folder in VS Code and run **Reopen in Container**, or run `devcont
   devcontainer.json      # base image, features, mounts, env, ports
   scripts/post-create.sh # only if a script-based entry or --git-config is used
   scripts/<name>.sh      # one per script-based entry
+  agent-policy/          # agent guard rules, installed by post-create.sh
   dws.yaml               # the selections used, for future `dws update`
 ```
 
@@ -61,6 +62,7 @@ A template or a list flag (`--lang`, `--agent`, `--tool`) **replaces** the list 
 | `--ssh-agent` | forward the host SSH agent |
 | `--ssh-mode mac\|linux` | how to forward it (default: detect host) |
 | `--git-config` | mount host `~/.gitconfig` and include it |
+| `--agent-guard` | deny agents access to tools' credentials (default on; see below) |
 | `-p, --port` | ports to forward |
 | `--name`, `--base-image` | container name and image |
 | `-y, --yes`, `--dry-run`, `--force` | no prompts / print only / overwrite existing `.devcontainer` |
@@ -73,6 +75,56 @@ VS Code forwards your SSH agent on its own. `--ssh-agent` makes forwarding work 
 - **linux**: bind-mounts the host's `$SSH_AUTH_SOCK` at `/ssh-agent`.
 
 Check it inside the container with `ssh-add -l`.
+
+## Credentials and AI agents
+
+**Threat model, plainly:** an AI agent running in the container runs as the same user as your tools. Anything `aws`, `gh` or `git` can read, the agent can read too, for example via a script or `sudo`. dws can't make a secret readable by a tool but not by an agent in the same container. What it does instead:
+
+1. **Keep long-term secrets on the host.** Only short-lived, narrowly scoped credentials go in, on demand, with `dws creds`. If an agent reads one, it's limited in scope and expires soon.
+2. **Agent guard (guardrail, not a boundary).** Agents get deny rules for the credential files and credential-printing commands of the tools you selected.
+
+Never put secrets in `devcontainer.json`, `containerEnv` or `dws.yaml`. These get committed, and show up in `docker inspect`.
+
+### `dws creds`
+
+```sh
+# AWS: exports temporary credentials from a host SSO / assume-role profile.
+aws sso login --profile dev-readonly
+dws creds aws --profile dev-readonly --region eu-west-1
+
+# GitHub: fine-grained PAT with an expiry, limited to this repo.
+dws creds github                    # hidden prompt
+pbpaste | dws creds github --token-stdin
+```
+
+- Credentials are streamed over stdin into the running container's `~/.aws` or gh config. They never appear on a command line or in env, and never in the project or a volume, so a rebuild wipes them.
+- **AWS:** profiles with long-term access keys are refused. Use a dedicated, least-privilege role for dev work.
+- **GitHub:** classic `ghp_` tokens and tokens without an expiry are refused. `gh` also becomes git's credential helper.
+- **SSH:** use `--ssh-agent` (see above). Agents can use your keys while you're connected but can't copy them out.
+- **Claude Code / Codex logins:** stored in the `dws-claude` and `dws-codex` volumes. An agent always has access to its own login.
+
+### Agent guard (`--agent-guard`, on by default)
+
+Each registry entry can declare `guard` rules, on top of a base set: `~/.ssh`, `.env` files, `env` and `printenv`.
+
+```yaml
+guard:
+  paths: ["~/.aws/**"]                          # agents may not read
+  commands: ["aws configure export-credentials"] # agents may not run
+  env: ["AWS_*"]                                # hidden from agent shells
+```
+
+| Agent | What dws installs | Covers |
+| --- | --- | --- |
+| Claude Code | `/etc/claude-code/managed-settings.d/dws-guard.json` with `permissions.deny` rules (managed settings outrank user and project settings) | `paths` → `Read(...)`, `commands` → `Bash(... *)` |
+| Codex | a marked `[shell_environment_policy]` block in `~/.codex/config.toml` (skipped if you already have that table) | `env` only. Codex has no read-deny rules |
+
+**Limits:**
+- Claude Code's deny rules cover its file tools and the file commands it recognizes, like `cat`. They don't cover a script that opens files itself.
+- An agent with `sudo` can remove the policy.
+- For OS-level enforcement, see Claude Code's [sandbox](https://code.claude.com/docs/en/sandboxing) `sandbox.credentials` settings. Inside Docker these need `enableWeakerNestedSandbox`.
+
+Turn the guard off with `--agent-guard=false`. Add rules for your own tools with `dws tools add ... --guard-path/--guard-cmd/--guard-env`.
 
 ## Global config
 
@@ -130,7 +182,7 @@ go test ./internal/devcontainer -update   # regenerate golden files
 
 Work happens on feature branches off `main`.
 
-**Planned:** `dws update`, `dws rebuild`, and fine-grained GitHub PATs with limited scope.
+**Planned:** `dws update`, `dws rebuild`, a guided flow for creating fine-grained GitHub PATs (GitHub has no API to create them), and opt-in Claude Code sandbox settings.
 
 ## License
 
