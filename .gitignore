@@ -1,0 +1,39 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors / IDEs
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*.swo
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Go build output
+/bin/
+/dist/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go test and tooling
+*.test
+*.out
+coverage.txt
+coverage.html
+go.work
+go.work.sum
+
+# Logs and temp
+*.log
+tmp/
+*.tmp
