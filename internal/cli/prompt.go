@@ -58,6 +58,8 @@ func promptTemplate(tmpls map[string]registry.Template) (string, error) {
 // pre-filled with the current selection.
 func promptSelection(sel *selection, cfg *config.Config, reg *registry.Registry, changed func(string) bool) error {
 	var fields []huh.Field
+	// hide[i] hides fields[i] depending on earlier answers.
+	hide := map[int]func() bool{}
 	lists := []struct {
 		flag  string
 		kind  registry.Kind
@@ -100,10 +102,21 @@ func promptSelection(sel *selection, cfg *config.Config, reg *registry.Registry,
 	guard := sel.AgentGuard
 	askGuard := !changed("agent-guard") && (len(sel.Agents) > 0 || !changed("agent"))
 	if askGuard {
+		hide[len(fields)] = func() bool { return len(sel.Agents) == 0 }
 		fields = append(fields, huh.NewConfirm().
 			Title("Install agent guard rules?").
 			Description("Denies AI agents reading credential files and running credential commands of the selected tools. A guardrail, not a security boundary.").
 			Value(&guard))
+	}
+
+	sandbox := sel.AgentSandbox
+	askSandbox := !changed("agent-sandbox") && (slices.Contains(sel.Agents, "claude") || !changed("agent"))
+	if askSandbox {
+		hide[len(fields)] = func() bool { return !slices.Contains(sel.Agents, "claude") }
+		fields = append(fields, huh.NewConfirm().
+			Title("Turn on the Claude Code sandbox?").
+			Description("OS-level limits on Claude's shell commands: blocks credential files, allows only known package registries (others prompt). docker can't run inside it.").
+			Value(&sandbox))
 	}
 
 	if len(fields) == 0 {
@@ -112,6 +125,9 @@ func promptSelection(sel *selection, cfg *config.Config, reg *registry.Registry,
 	groups := make([]*huh.Group, len(fields))
 	for i, f := range fields {
 		groups[i] = huh.NewGroup(f)
+		if h, ok := hide[i]; ok {
+			groups[i] = groups[i].WithHideFunc(h)
+		}
 	}
 	if err := runForm(groups...); err != nil {
 		return err
@@ -128,6 +144,9 @@ func promptSelection(sel *selection, cfg *config.Config, reg *registry.Registry,
 	sel.GitConfig = gitCfg
 	if askGuard {
 		sel.AgentGuard = guard
+	}
+	if askSandbox {
+		sel.AgentSandbox = sandbox
 	}
 	return nil
 }

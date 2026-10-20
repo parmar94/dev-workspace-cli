@@ -39,7 +39,7 @@ sudo chown -R "$(id -u):$(id -g)" /home/vscode/.claude /home/vscode/.codex
 echo "==> Installing codex"
 bash ./codex.sh
 
-echo "==> Installing Claude Code agent guard"
+echo "==> Installing Claude Code agent policy"
 sudo install -D -m 0644 ../agent-policy/claude-managed-settings.json /etc/claude-code/managed-settings.d/dws-guard.json
 
 echo "==> Installing Codex agent guard"
@@ -79,5 +79,5 @@ npm install -g @openai/codex
 === .devcontainer/agent-policy/codex-config.toml
 # >>> dws agent guard (managed by dws; edits between these markers are replaced)
 [shell_environment_policy]
-filters = { "AWS_*" = "exclude", "GH_TOKEN" = "exclude", "GITHUB_TOKEN" = "exclude" }
+filters = { "AWS_*" = "exclude", "AWS_ACCESS_KEY_ID" = "exclude", "AWS_SECRET_ACCESS_KEY" = "exclude", "AWS_SESSION_TOKEN" = "exclude", "GH_TOKEN" = "exclude", "GITHUB_TOKEN" = "exclude" }
 # <<< dws agent guard

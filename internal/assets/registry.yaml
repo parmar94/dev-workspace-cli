@@ -4,7 +4,8 @@
 # In mounts, {{home}} expands to the remote user's home directory. Agent
 # volumes are shared across projects so you only log in once.
 # `guard` lists credential paths, commands and env vars that AI agents are
-# denied when the entry is installed (see --agent-guard).
+# denied when the entry is installed (see --agent-guard). `domains` are
+# network hosts pre-allowed when the Claude Code sandbox is on (--agent-sandbox).
 
 languages:
   go:
@@ -12,22 +13,27 @@ languages:
     feature: ghcr.io/devcontainers/features/go:1
     options:
       version: latest
+    domains: [proxy.golang.org, sum.golang.org]
   node:
     description: Node.js (via nvm) and npm
     feature: ghcr.io/devcontainers/features/node:1
     options:
       version: lts
+    domains: [registry.npmjs.org]
   python:
     description: Python 3 and pip
     feature: ghcr.io/devcontainers/features/python:1
     options:
       version: latest
+    domains: [pypi.org, files.pythonhosted.org]
   rust:
     description: Rust toolchain (rustup)
     feature: ghcr.io/devcontainers/features/rust:1
+    domains: [crates.io, index.crates.io, static.crates.io, static.rust-lang.org]
   java:
     description: Java JDK
     feature: ghcr.io/devcontainers/features/java:1
+    domains: [repo.maven.apache.org, repo1.maven.org, services.gradle.org, plugins.gradle.org]
 
 agents:
   claude:
@@ -62,7 +68,8 @@ tools:
     guard:
       paths: ["~/.aws/**"]
       commands: ["aws configure export-credentials", "aws configure get", "aws sts get-session-token"]
-      env: ["AWS_*"]
+      # Globs work for Codex; the Claude sandbox needs exact names.
+      env: ["AWS_*", AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN]
   terraform:
     description: Terraform
     feature: ghcr.io/devcontainers/features/terraform:1

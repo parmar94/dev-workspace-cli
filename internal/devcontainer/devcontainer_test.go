@@ -63,6 +63,19 @@ func TestRenderGolden(t *testing.T) {
 			s.AgentGuard = true
 			return s
 		},
+		"sandbox-claude-python-aws": func(t *testing.T) Spec {
+			s := base("sandbox")
+			s.Entries = resolve(t, "python", "claude", "aws-cli")
+			s.AgentGuard = true
+			s.AgentSandbox = true
+			return s
+		},
+		"sandbox-only": func(t *testing.T) Spec {
+			s := base("sandbox-only")
+			s.Entries = resolve(t, "go", "claude")
+			s.AgentSandbox = true
+			return s
+		},
 		"guard-without-agents": func(t *testing.T) Spec {
 			s := base("guard-none")
 			s.Entries = resolve(t, "go", "aws-cli")

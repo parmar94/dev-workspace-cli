@@ -31,7 +31,7 @@ type updateOpts struct {
 // given, update prompts (on a terminal) instead.
 var selectionFlagNames = []string{
 	"name", "base-image", "lang", "agent", "tool", "ssh-agent", "ssh-mode",
-	"git-config", "agent-guard", "port",
+	"git-config", "agent-guard", "agent-sandbox", "port",
 	"add-lang", "remove-lang", "add-agent", "remove-agent", "add-tool", "remove-tool",
 }
 
@@ -136,6 +136,7 @@ func (a *app) runUpdate(cmd *cobra.Command, dir string, o *updateOpts) error {
 	if len(added) > 0 {
 		fmt.Fprintf(errOut, "Also adding required: %s\n", strings.Join(added, ", "))
 	}
+	warnSelection(errOut, sel)
 	for _, c := range changes {
 		fmt.Fprintln(errOut, c)
 	}
@@ -199,6 +200,7 @@ func selectionChanges(old, sel selection) []string {
 	field("ssh agent", orNone(string(old.SSH)), orNone(string(sel.SSH)))
 	field("git config", old.GitConfig, sel.GitConfig)
 	field("agent guard", old.AgentGuard, sel.AgentGuard)
+	field("agent sandbox", old.AgentSandbox, sel.AgentSandbox)
 	field("ports", old.Ports, sel.Ports)
 	return out
 }

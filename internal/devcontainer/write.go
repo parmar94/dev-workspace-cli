@@ -32,8 +32,10 @@ type State struct {
 	SSH       SSHMode  `yaml:"ssh_agent,omitempty"`
 	GitConfig bool     `yaml:"git_config,omitempty"`
 	// AgentGuard installs deny rules for the selected agents.
-	AgentGuard bool  `yaml:"agent_guard"`
-	Ports      []int `yaml:"ports,omitempty"`
+	AgentGuard bool `yaml:"agent_guard"`
+	// AgentSandbox turns on Claude Code's Bash sandbox.
+	AgentSandbox bool  `yaml:"agent_sandbox,omitempty"`
+	Ports        []int `yaml:"ports,omitempty"`
 	// Generated maps each generated file (relative to the project root) to a
 	// hash of its content, so dws update can detect hand edits.
 	Generated map[string]string `yaml:"generated,omitempty"`

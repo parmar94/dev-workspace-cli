@@ -38,6 +38,8 @@ type Spec struct {
 	// AgentGuard installs deny rules for the selected agents built from the
 	// entries' guard lists (see guard.go).
 	AgentGuard bool
+	// AgentSandbox turns on Claude Code's OS-level Bash sandbox (see guard.go).
+	AgentSandbox bool
 }
 
 // File is one generated file, with a path relative to the project root.
@@ -123,9 +125,10 @@ func Render(s Spec) ([]File, error) {
 
 	var guardFiles []File
 	var guardSteps string
-	if s.AgentGuard {
+	if s.AgentGuard || s.AgentSandbox {
 		var err error
-		if guardFiles, guardSteps, err = agentGuard(s.Entries); err != nil {
+		policy := agentPolicy{Guard: s.AgentGuard, Sandbox: s.AgentSandbox}
+		if guardFiles, guardSteps, err = agentGuard(s.Entries, policy); err != nil {
 			return nil, err
 		}
 	}

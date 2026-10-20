@@ -20,6 +20,7 @@ type selectionFlags struct {
 	sshMode   string
 	gitConfig bool
 	guard     bool
+	sandbox   bool
 	ports     []int
 }
 
@@ -33,6 +34,7 @@ func (o *selectionFlags) register(f *pflag.FlagSet) {
 	f.StringVar(&o.sshMode, "ssh-mode", "", "how to forward the SSH agent: mac or linux (default: detect host)")
 	f.BoolVar(&o.gitConfig, "git-config", false, "mount the host ~/.gitconfig and include it")
 	f.BoolVar(&o.guard, "agent-guard", true, "deny agents access to credential files and commands of selected tools (use --agent-guard=false to skip)")
+	f.BoolVar(&o.sandbox, "agent-sandbox", false, "turn on Claude Code's OS-level sandbox for its shell commands (blocks credential reads, limits network)")
 	f.IntSliceVarP(&o.ports, "port", "p", nil, "ports to forward, comma-separated")
 }
 
@@ -73,6 +75,9 @@ func (o *selectionFlags) apply(changed func(string) bool, sel *selection) error 
 	}
 	if changed("agent-guard") {
 		sel.AgentGuard = o.guard
+	}
+	if changed("agent-sandbox") {
+		sel.AgentSandbox = o.sandbox
 	}
 	if changed("port") {
 		sel.Ports = o.ports

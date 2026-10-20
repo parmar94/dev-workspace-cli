@@ -38,6 +38,9 @@ type Item struct {
 	Mounts      []string          `yaml:"mounts,omitempty"`
 	Env         map[string]string `yaml:"env,omitempty"`
 	Guard       Guard             `yaml:"guard,omitempty"`
+	// Domains are network hosts the entry needs at run time (package
+	// registries etc.), pre-allowed when the agent sandbox is on.
+	Domains []string `yaml:"domains,omitempty"`
 }
 
 // Guard lists credential paths and commands that AI agents should be denied
@@ -55,6 +58,9 @@ type Guard struct {
 func (g Guard) IsZero() bool {
 	return len(g.Paths) == 0 && len(g.Commands) == 0 && len(g.Env) == 0
 }
+
+// BaseDomains are pre-allowed in the agent sandbox for every project.
+var BaseDomains = []string{"github.com", "*.github.com", "*.githubusercontent.com"}
 
 // BaseGuard applies whenever agent guard rules are generated.
 var BaseGuard = Guard{

@@ -27,6 +27,7 @@ dws init [dir] [flags]
 ```
   -a, --agent strings       AI agents, comma-separated (claude, codex)
       --agent-guard         deny agents access to credential files and commands of selected tools (use --agent-guard=false to skip) (default true)
+      --agent-sandbox       turn on Claude Code's OS-level sandbox for its shell commands (blocks credential reads, limits network)
       --base-image string   base image (default from config)
       --dry-run             print the files instead of writing them
       --force               overwrite an existing .devcontainer

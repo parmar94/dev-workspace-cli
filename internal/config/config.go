@@ -25,12 +25,14 @@ const (
 
 // Defaults are the starting selections for `dws init`.
 type Defaults struct {
-	Languages  []string `yaml:"languages,omitempty"`
-	Agents     []string `yaml:"agents,omitempty"`
-	Tools      []string `yaml:"tools,omitempty"`
-	SSHAgent   bool     `yaml:"ssh_agent,omitempty"`
-	BaseImage  string   `yaml:"base_image,omitempty"`
-	RemoteUser string   `yaml:"remote_user,omitempty"`
+	Languages []string `yaml:"languages,omitempty"`
+	Agents    []string `yaml:"agents,omitempty"`
+	Tools     []string `yaml:"tools,omitempty"`
+	SSHAgent  bool     `yaml:"ssh_agent,omitempty"`
+	// AgentSandbox turns on Claude Code's Bash sandbox by default.
+	AgentSandbox bool   `yaml:"agent_sandbox,omitempty"`
+	BaseImage    string `yaml:"base_image,omitempty"`
+	RemoteUser   string `yaml:"remote_user,omitempty"`
 }
 
 // Config is the global config file.

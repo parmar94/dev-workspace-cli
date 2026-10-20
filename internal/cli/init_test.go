@@ -135,6 +135,30 @@ func TestInitAgentGuard(t *testing.T) {
 	}
 }
 
+func TestInitAgentSandbox(t *testing.T) {
+	out, errOut, err := run(t, "", "init", t.TempDir(), "-y", "--dry-run", "--agent", "claude", "--lang", "node", "--agent-sandbox")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"enableWeakerNestedSandbox": true`, `"registry.npmjs.org"`, "bubblewrap socat", "agent_sandbox: true"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output missing %q", want)
+		}
+	}
+	if strings.Contains(errOut, "Note:") {
+		t.Errorf("unexpected note: %s", errOut)
+	}
+
+	// Defaults can turn it on; it only applies to Claude.
+	_, errOut, err = run(t, "defaults:\n  agent_sandbox: true\n", "init", t.TempDir(), "-y", "--dry-run", "--agent", "codex")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(errOut, "only applies to Claude Code") {
+		t.Errorf("missing note: %q", errOut)
+	}
+}
+
 func TestInitRefusesExistingWithoutForce(t *testing.T) {
 	dir := t.TempDir()
 	if _, _, err := run(t, "", "init", dir, "-y"); err != nil {

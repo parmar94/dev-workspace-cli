@@ -103,6 +103,7 @@ func (a *app) runInit(cmd *cobra.Command, dir string, o *initOpts) error {
 	if len(added) > 0 {
 		fmt.Fprintf(errOut, "Also adding required: %s\n", strings.Join(added, ", "))
 	}
+	warnSelection(errOut, sel)
 	if o.dryRun {
 		printFiles(out, files)
 		return nil
@@ -129,7 +130,8 @@ func buildSelection(cmd *cobra.Command, cfg *config.Config, tmpls map[string]reg
 		Agents:    d.Agents,
 		Tools:     d.Tools,
 		// On by default; only matters when an agent is selected.
-		AgentGuard: true,
+		AgentGuard:   true,
+		AgentSandbox: d.AgentSandbox,
 	}
 	if d.SSHAgent {
 		sel.SSH = hostSSHMode()
@@ -177,14 +179,15 @@ func render(sel selection, reg *registry.Registry) ([]devcontainer.File, []strin
 		return nil, nil, err
 	}
 	files, err := devcontainer.Render(devcontainer.Spec{
-		Name:       sel.Name,
-		Image:      sel.BaseImage,
-		RemoteUser: sel.User,
-		Entries:    entries,
-		SSH:        sel.SSH,
-		GitConfig:  sel.GitConfig,
-		Ports:      sel.Ports,
-		AgentGuard: sel.AgentGuard,
+		Name:         sel.Name,
+		Image:        sel.BaseImage,
+		RemoteUser:   sel.User,
+		Entries:      entries,
+		SSH:          sel.SSH,
+		GitConfig:    sel.GitConfig,
+		Ports:        sel.Ports,
+		AgentGuard:   sel.AgentGuard,
+		AgentSandbox: sel.AgentSandbox,
 	})
 	if err != nil {
 		return nil, nil, err
@@ -195,6 +198,13 @@ func render(sel selection, reg *registry.Registry) ([]devcontainer.File, []strin
 		return nil, nil, err
 	}
 	return append(files, state), added, nil
+}
+
+// warnSelection prints notes about options that have no effect.
+func warnSelection(w io.Writer, sel selection) {
+	if sel.AgentSandbox && !slices.Contains(sel.Agents, "claude") {
+		fmt.Fprintln(w, "Note: --agent-sandbox only applies to Claude Code, which isn't selected.")
+	}
 }
 
 func checkKind(reg *registry.Registry, kind registry.Kind, names []string) error {
