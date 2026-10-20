@@ -25,6 +25,7 @@ defaults:
   agents: [claude]
   tools: [gh, jq]
   ssh_agent: true
+  agent_sandbox: false
   base_image: mcr.microsoft.com/devcontainers/base:ubuntu
   remote_user: vscode
 
@@ -55,6 +56,7 @@ The starting selection for every `dws init`.
 | --- | --- |
 | `languages`, `agents`, `tools` | entry names from `dws tools list` |
 | `ssh_agent` | forward your SSH agent by default |
+| `agent_sandbox` | turn on the [Claude Code sandbox](credentials.md#claude-code-sandbox-opt-in) by default |
 | `base_image` | image the container is built from (default `mcr.microsoft.com/devcontainers/base:ubuntu`) |
 | `remote_user` | user inside the container (default `vscode`). Volume mounts and scripts use this user's home. |
 

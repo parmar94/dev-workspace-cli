@@ -18,6 +18,8 @@
 Generated from the CLI. Run `make docs` after changing commands or flags.
 
 - [`dws init`](reference/dws_init.md): generate a `.devcontainer/`
+- [`dws update`](reference/dws_update.md): change and regenerate a project's setup
+- [`dws rebuild`](reference/dws_rebuild.md): rebuild a project's container
 - [`dws config`](reference/dws_config.md): manage the global config
 - [`dws tools`](reference/dws_tools.md): list, add and remove languages, agents and tools
 - [`dws templates`](reference/dws_templates.md): list and show templates
@@ -32,3 +34,4 @@ Generated from the CLI. Run `make docs` after changing commands or flags.
 - **Global config:** your defaults, favorites, custom registry entries and templates, at `~/.config/dws/config.yaml`.
 - **`dws.yaml`:** written next to `devcontainer.json`. It records what a project was generated with, and never contains secrets.
 - **Agent guard:** deny rules that keep AI agents away from the credentials of tools in the same container. A guardrail, not a security boundary.
+- **Agent sandbox:** opt-in OS-level sandbox for Claude Code's shell commands, which blocks credential reads and limits network access.

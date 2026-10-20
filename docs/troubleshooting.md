@@ -24,6 +24,20 @@ Your config's `registry:` section has a problem, and the message lists every one
 **`Also adding required: node`**
 Not an error. An entry you chose (like `codex`) needs another one, so dws added it and installs it first.
 
+## `dws update` and `dws rebuild`
+
+**`no .devcontainer/dws.yaml …; run dws init first`**
+`update` needs the `dws.yaml` that `init` writes. For a hand-written dev container, run `dws init --force` once.
+
+**`these generated files were edited by hand since dws wrote them: …`**
+dws won't overwrite your edits. Move the change into dws instead: a custom registry entry, `--port`, `--base-image` or a template. Or pass `--force` to discard the edits.
+
+**`Already up to date.`**
+Nothing in the selection or generated files would change. Use `dws rebuild` if you just want a fresh container.
+
+**`the devcontainer CLI is not installed`**
+`dws rebuild` needs `devcontainer` on PATH, or `npx` to run it. Install it with `npm install -g @devcontainers/cli`, or rebuild from VS Code.
+
 ## Building the container
 
 **A feature fails to install**
@@ -68,7 +82,7 @@ For SSO, your session has expired: run `aws sso login --profile <p>`. Check that
 Create a fine-grained token with an expiration date; see [Credentials](credentials.md#github-fine-grained-expiring-tokens).
 
 **`gh is not installed in the container`**
-Add `gh` (`dws init … --tool gh,… --force`) and rebuild.
+Add it with `dws update --add-tool gh --rebuild`, then pass the token in again.
 
 ## Agent guard
 
@@ -80,6 +94,20 @@ The rule probably comes from a tool's `guard` or the base set (`.env` files). Ei
 - read the file yourself and share only what's needed, or
 - regenerate with `--agent-guard=false` (not recommended), or
 - override the tool in your registry with a narrower `guard`.
+
+## Claude Code sandbox
+
+**`bwrap: Can't mount proc on /newroot/proc: Operation not permitted`**
+`enableWeakerNestedSandbox` is missing. dws sets it, so check that nothing else overrides `sandbox` settings, then regenerate with `dws update --agent-sandbox --yes` and rebuild.
+
+**`/sandbox` shows missing dependencies**
+`bubblewrap` and `socat` are installed by `post-create.sh` on Debian/Ubuntu images. On other images, install them yourself.
+
+**A command needs a host that isn't allowed**
+Approve it when prompted, or add it to the registry entry with `dws tools add <name> … --domain <host>` and run `dws update --yes`.
+
+**`docker` commands fail under Claude**
+Docker can't run inside the sandbox. Run them yourself, or see Claude Code's `excludedCommands`.
 
 ## Docs and development
 

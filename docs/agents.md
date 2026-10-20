@@ -18,7 +18,7 @@ dws init --agent claude,codex --yes
 
 The volumes are shared by every dws container, so you log in once and stay logged in across rebuilds and projects. To start fresh, remove the volume: `docker volume rm dws-claude`.
 
-The [agent guard](credentials.md#agent-guard) is on by default and keeps agents away from the credentials of the other tools you selected.
+The [agent guard](credentials.md#agent-guard) is on by default and keeps agents away from the credentials of the other tools you selected. For Claude Code you can also turn on the [OS-level sandbox](credentials.md#claude-code-sandbox-opt-in) with `--agent-sandbox`.
 
 To add another agent, see [Adding tools](registry.md); the `gemini` example there works the same way.
 
@@ -42,9 +42,9 @@ dws skills install --force                             # update after upgrading 
 
 | Skill | Ask things like |
 | --- | --- |
-| `dws-devcontainer-setup` | "set up a dev container for this repo", "add Python and Terraform to the dev container" |
+| `dws-devcontainer-setup` | "set up a dev container for this repo", "add Python and Terraform to the dev container", "rebuild the dev container" |
 | `dws-config` | "make Codex one of my default agents", "save my usual Go setup as a template", "add httpie to dws" |
-| `dws-credentials` | "how do I use AWS in the container?", "set up GitHub access for the container" |
+| `dws-credentials` | "how do I use AWS in the container?", "set up GitHub access for the container", "should I turn on the Claude sandbox?" |
 
 ### What the agent will do
 

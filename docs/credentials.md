@@ -29,15 +29,34 @@ To check, run `ssh-add -l` in the container. "The agent has no identities" means
 
 ## GitHub: fine-grained, expiring tokens
 
-1. Create a token at <https://github.com/settings/personal-access-tokens/new>:
-   - **Repository access:** only the repositories this project needs.
-   - **Permissions:** the minimum, for example *Contents: read and write* and *Pull requests: read and write*.
-   - **Expiration:** short, for example 7 or 30 days.
-2. Start the container, then pass the token in from the host:
-   ```sh
-   dws creds github                       # hidden prompt
-   pbpaste | dws creds github --token-stdin
-   ```
+With the container running, let dws guide you:
+
+```sh
+dws creds github --create                    # contents + pull requests: write, 30 days
+dws creds github --create --access read      # contents: read
+dws creds github --create --access push --days 7 --perm issues=write
+```
+
+dws reads `owner/repo` from your `origin` remote (or `--repo owner/name`) and opens GitHub's "new token" page pre-filled with a name, description, owner, expiry and permissions. GitHub can't pre-select repositories, so on that page:
+
+1. Check **Resource owner**. For an organization, re-select it, because GitHub may not apply the pre-filled owner.
+2. Under **Repository access**, choose **Only select repositories** and pick this repository.
+3. Review the permissions, click **Generate token**, copy it, and paste it at dws's hidden prompt.
+
+| `--access` | Permissions |
+| --- | --- |
+| `read` | contents: read |
+| `push` | contents: write |
+| `pr` (default) | contents: write, pull requests: write |
+
+Add more with `--perm name=read|write|admin`, using GitHub's permission names such as `issues`, `workflows` or `actions`. Metadata read access is always included.
+
+You already have a token? Then skip `--create`:
+
+```sh
+dws creds github                       # hidden prompt
+pbpaste | dws creds github --token-stdin
+```
 
 dws checks the token with GitHub before passing it in:
 - **Classic `ghp_` tokens are refused:** they can't be limited to specific repositories.
@@ -109,15 +128,41 @@ How each agent enforces them:
 | Codex | a marked `[shell_environment_policy]` block in `~/.codex/config.toml` | hides the listed env vars from commands Codex runs. Codex has no file-read deny rules. If you already have a `[shell_environment_policy]` table, dws leaves it alone and prints the block for you to merge. |
 
 **Limits, plainly:**
-- Claude Code's deny rules cover its file tools and file commands it recognizes (`cat`, `head`, …). They don't cover a script that opens files itself.
+- Claude Code's deny rules cover its file tools and file commands it recognizes (`cat`, `head`, …). They don't cover a script that opens files itself. The sandbox below does.
 - An agent with `sudo` (the default container user has it) can remove the policy.
-- For OS-level enforcement, look at Claude Code's [sandbox](https://code.claude.com/docs/en/sandboxing) `sandbox.credentials` settings. Inside Docker it requires `enableWeakerNestedSandbox`, and it adds network-approval prompts.
+
+## Claude Code sandbox (opt-in)
+
+```sh
+dws init --agent claude --agent-sandbox ...
+dws update --agent-sandbox          # turn it on for an existing project
+```
+
+This turns on Claude Code's [OS-level sandbox](https://code.claude.com/docs/en/sandboxing) for every shell command Claude runs, including scripts it writes. dws adds a `sandbox` block to the same managed settings file:
+
+| Setting | From |
+| --- | --- |
+| `filesystem.denyRead` | the guard `paths`. Directories are blocked as a whole, and `**/.env` becomes `/workspaces/**/.env`. |
+| `credentials.envVars` (`deny`) | the guard `env` names without `*` (for example `AWS_SESSION_TOKEN`) |
+| `network.allowedDomains` | `github.com`, `*.github.com`, `*.githubusercontent.com` plus each selected entry's `domains` (Go proxy, npm, PyPI, crates.io, Maven…) |
+| `enableWeakerNestedSandbox: true` | required in Docker: unprivileged containers can't mount a fresh `/proc`, so the container is the outer boundary |
+
+`post-create.sh` also installs the sandbox's Linux dependencies (`bubblewrap`, `socat`).
+
+**Trade-offs:**
+- **New network hosts prompt for approval.** Add hosts you need often with `dws tools add … --domain`.
+- **`docker` doesn't work inside the sandbox.** If you use docker-in-docker with Claude, see [running commands outside the sandbox](https://code.claude.com/docs/en/sandboxing#run-commands-outside-the-sandbox-with-excludedcommands).
+- **Allowing `github.com` means sandboxed commands can still push data to GitHub.** This is needed for git.
+- **Claude can still ask to retry a blocked command outside the sandbox.** You approve or deny each retry.
+- **Only Debian/Ubuntu base images** are supported for the dependency install (`apt-get`).
+
+Check it inside the container with `/sandbox` in Claude Code.
 
 ## Checklist
 
 - [ ] `--ssh-agent` instead of copying keys
 - [ ] fine-grained, repo-scoped, expiring GitHub tokens via `dws creds github`
 - [ ] a dedicated least-privilege AWS role via `dws creds aws`
-- [ ] agent guard on (`--agent-guard`, the default)
+- [ ] agent guard on (`--agent-guard`, the default), and `--agent-sandbox` for Claude when you can live with the trade-offs
 - [ ] nothing secret in `.devcontainer/`, `containerEnv` or the global config
 - [ ] production credentials and deploys stay on the host

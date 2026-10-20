@@ -29,6 +29,7 @@ Add `--json` for machine-readable output, or `--kind tool` to filter.
 | `mounts` | no | Docker mount specs. `{{home}}` becomes the container user's home. |
 | `env` | no | `containerEnv` values. **Never secrets.** |
 | `guard` | no | credential paths, commands and env vars to keep from agents; see below |
+| `domains` | no | network hosts the entry needs (package registries), pre-allowed in the [Claude Code sandbox](credentials.md#claude-code-sandbox-opt-in) |
 
 Names must be lowercase `a-z 0-9 . _ -` and unique across languages, agents and tools.
 
@@ -41,9 +42,10 @@ Names must be lowercase `a-z 0-9 . _ -` and unique across languages, agents and 
 ## Examples
 
 ```sh
-# Language from a community feature
+# Language from a community feature, with the package hosts the Claude sandbox should allow
 dws tools add deno --kind language \
-  --feature ghcr.io/devcontainers-extra/features/deno:1 -d "Deno runtime"
+  --feature ghcr.io/devcontainers-extra/features/deno:1 -d "Deno runtime" \
+  --domain deno.land --domain jsr.io
 
 # Feature with options
 dws tools add go --kind language \
@@ -96,7 +98,7 @@ registry:
 | --- | --- |
 | `paths` | Claude Code `Read(<path>)` deny rules (gitignore-style globs; `~/` = home) |
 | `commands` | Claude Code `Bash(<command> *)` deny rules (prefix match) |
-| `env` | Codex `shell_environment_policy` exclusions (names or `*` globs) |
+| `env` | Codex `shell_environment_policy` exclusions (names or `*` globs). With the sandbox on, exact names (no `*`) are also removed from Claude's sandboxed commands. |
 
 Add guard rules to any tool that logs in or stores tokens.
 

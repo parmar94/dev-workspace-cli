@@ -90,13 +90,28 @@ The first build takes a few minutes while features install. After that it's cach
 
 ## Changing a project's setup later
 
-Re-run `dws init` with the complete new selection and `--force`, then rebuild the container. In VS Code use **Dev Containers: Rebuild Container**; with the CLI, use `devcontainer up --workspace-folder . --remove-existing-container`.
+`dws update` starts from what the project was generated with (its `dws.yaml`), applies your changes, and regenerates:
 
 ```sh
-dws init --template go-web --tool gh,jq,ripgrep --yes --force
+dws update --add-tool ripgrep,terraform --remove-agent codex --dry-run   # preview
+dws update --add-tool ripgrep,terraform --remove-agent codex
+dws update                     # on a terminal: prompts, pre-filled with the current setup
+dws update --yes               # just regenerate, e.g. after upgrading dws or editing your registry
 ```
 
-`--force` replaces `devcontainer.json`, `dws.yaml`, `scripts/` and `agent-policy/`. Other files in `.devcontainer/` are left alone.
+Then rebuild the container to apply it:
+
+```sh
+dws rebuild                    # devcontainer CLI: replaces the container, keeps agent-login volumes
+dws update --add-lang python --rebuild   # or both in one go
+```
+
+In VS Code you can instead run **Dev Containers: Rebuild Container**.
+
+Notes:
+- dws records a hash of every file it generates. If you edit `devcontainer.json` or a script by hand, `dws update` stops and lists the files, rather than silently overwriting your edits. Move the edits elsewhere, or pass `--force`.
+- `update` replaces `devcontainer.json`, `dws.yaml`, `scripts/` and `agent-policy/`. Other files in `.devcontainer/` are left alone.
+- Credentials passed with `dws creds` live in the container, so pass them in again after a rebuild.
 
 ## Let an agent do it
 
