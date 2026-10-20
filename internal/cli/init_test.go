@@ -22,6 +22,13 @@ func run(t *testing.T, cfg string, args ...string) (string, string, error) {
 			t.Fatal(err)
 		}
 	}
+	return runWith(t, cfgPath, args...)
+}
+
+// runWith is like run but uses an existing config path, so state persists
+// across calls.
+func runWith(t *testing.T, cfgPath string, args ...string) (string, string, error) {
+	t.Helper()
 	var out, errOut bytes.Buffer
 	root := newRootCmd()
 	root.SetOut(&out)
