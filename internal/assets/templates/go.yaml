@@ -1,0 +1,4 @@
+description: Go service with Claude Code and GitHub CLI
+languages: [go]
+agents: [claude]
+tools: [gh, jq]

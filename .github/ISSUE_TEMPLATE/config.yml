@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/parmar94/dev-workspace-cli/security/advisories/new
+    about: Report security issues privately.
+  - name: Documentation
+    url: https://github.com/parmar94/dev-workspace-cli/tree/main/docs
+    about: Guides, troubleshooting and the command reference.

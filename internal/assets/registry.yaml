@@ -1,0 +1,92 @@
+# Built-in catalog. Names must be unique across languages, agents and tools.
+# Each entry has either a dev container `feature` (with optional `options`)
+# or a `script` run from post-create.sh as the remote user.
+# In mounts, {{home}} expands to the remote user's home directory. Agent
+# volumes are shared across projects so you only log in once.
+# `guard` lists credential paths, commands and env vars that AI agents are
+# denied when the entry is installed (see --agent-guard). `domains` are
+# network hosts pre-allowed when the Claude Code sandbox is on (--agent-sandbox).
+
+languages:
+  go:
+    description: Go toolchain
+    feature: ghcr.io/devcontainers/features/go:1
+    options:
+      version: latest
+    domains: [proxy.golang.org, sum.golang.org]
+  node:
+    description: Node.js (via nvm) and npm
+    feature: ghcr.io/devcontainers/features/node:1
+    options:
+      version: lts
+    domains: [registry.npmjs.org]
+  python:
+    description: Python 3 and pip
+    feature: ghcr.io/devcontainers/features/python:1
+    options:
+      version: latest
+    domains: [pypi.org, files.pythonhosted.org]
+  rust:
+    description: Rust toolchain (rustup)
+    feature: ghcr.io/devcontainers/features/rust:1
+    domains: [crates.io, index.crates.io, static.crates.io, static.rust-lang.org]
+  java:
+    description: Java JDK
+    feature: ghcr.io/devcontainers/features/java:1
+    domains: [repo.maven.apache.org, repo1.maven.org, services.gradle.org, plugins.gradle.org]
+
+agents:
+  claude:
+    description: Claude Code
+    feature: ghcr.io/anthropics/devcontainer-features/claude-code:1.0
+    requires: [node]
+    mounts:
+      - source=dws-claude,target={{home}}/.claude,type=volume
+  codex:
+    description: OpenAI Codex CLI
+    script: npm install -g @openai/codex
+    requires: [node]
+    mounts:
+      - source=dws-codex,target={{home}}/.codex,type=volume
+
+tools:
+  gh:
+    description: GitHub CLI
+    feature: ghcr.io/devcontainers/features/github-cli:1
+    guard:
+      paths: ["~/.config/gh/**"]
+      commands: ["gh auth token"]
+      env: [GH_TOKEN, GITHUB_TOKEN]
+  docker-in-docker:
+    description: Docker engine inside the container
+    feature: ghcr.io/devcontainers/features/docker-in-docker:2
+    guard:
+      paths: ["~/.docker/config.json"]
+  aws-cli:
+    description: AWS CLI v2
+    feature: ghcr.io/devcontainers/features/aws-cli:1
+    guard:
+      paths: ["~/.aws/**"]
+      commands: ["aws configure export-credentials", "aws configure get", "aws sts get-session-token"]
+      # Globs work for Codex; the Claude sandbox needs exact names.
+      env: ["AWS_*", AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN]
+  terraform:
+    description: Terraform
+    feature: ghcr.io/devcontainers/features/terraform:1
+    guard:
+      paths: ["~/.terraform.d/credentials.tfrc.json"]
+      env: ["TF_TOKEN_*"]
+  kubectl:
+    description: kubectl, helm and minikube
+    feature: ghcr.io/devcontainers/features/kubectl-helm-minikube:1
+    guard:
+      paths: ["~/.kube/**"]
+  jq:
+    description: JSON processor
+    script: sudo apt-get update && sudo apt-get install -y --no-install-recommends jq
+  ripgrep:
+    description: Fast recursive grep (rg)
+    script: sudo apt-get update && sudo apt-get install -y --no-install-recommends ripgrep
+  fzf:
+    description: Fuzzy finder
+    script: sudo apt-get update && sudo apt-get install -y --no-install-recommends fzf

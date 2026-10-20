@@ -1,0 +1,4 @@
+description: Python project with Claude Code and GitHub CLI
+languages: [python]
+agents: [claude]
+tools: [gh, jq]

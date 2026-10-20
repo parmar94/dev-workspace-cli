@@ -1,0 +1,244 @@
+// Package devcontainer renders a .devcontainer directory from a Spec.
+package devcontainer
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"maps"
+	"path"
+	"slices"
+	"strings"
+
+	"github.com/parmar94/dev-workspace-cli/internal/registry"
+)
+
+// Dir is the directory, relative to the project root, that dws writes into.
+const Dir = ".devcontainer"
+
+// SSHMode selects how the host SSH agent socket is forwarded.
+type SSHMode string
+
+const (
+	SSHNone  SSHMode = ""
+	SSHMac   SSHMode = "mac"   // Docker Desktop / OrbStack magic socket
+	SSHLinux SSHMode = "linux" // bind-mount the host's $SSH_AUTH_SOCK
+)
+
+// Spec is everything needed to render a dev container.
+type Spec struct {
+	Name       string
+	Image      string
+	RemoteUser string
+	// Entries must already be resolved, with dependencies first.
+	Entries   []registry.Entry
+	SSH       SSHMode
+	GitConfig bool
+	Ports     []int
+	// AgentGuard installs deny rules for the selected agents built from the
+	// entries' guard lists (see guard.go).
+	AgentGuard bool
+	// AgentSandbox turns on Claude Code's OS-level Bash sandbox (see guard.go).
+	AgentSandbox bool
+}
+
+// File is one generated file, with a path relative to the project root.
+type File struct {
+	Path string
+	Data []byte
+	Exec bool
+}
+
+// devcontainerJSON mirrors the subset of devcontainer.json that dws writes.
+// Field order here is the order in the output.
+type devcontainerJSON struct {
+	Name                        string                    `json:"name"`
+	Image                       string                    `json:"image"`
+	Features                    map[string]map[string]any `json:"features,omitempty"`
+	OverrideFeatureInstallOrder []string                  `json:"overrideFeatureInstallOrder,omitempty"`
+	Mounts                      []string                  `json:"mounts,omitempty"`
+	ContainerEnv                map[string]string         `json:"containerEnv,omitempty"`
+	ForwardPorts                []int                     `json:"forwardPorts,omitempty"`
+	PostCreateCommand           string                    `json:"postCreateCommand,omitempty"`
+	PostStartCommand            string                    `json:"postStartCommand,omitempty"`
+	RemoteUser                  string                    `json:"remoteUser"`
+}
+
+// Render produces devcontainer.json and any install scripts.
+func Render(s Spec) ([]File, error) {
+	if s.Name == "" || s.Image == "" || s.RemoteUser == "" {
+		return nil, fmt.Errorf("devcontainer: name, image and remote user are required")
+	}
+	home := homeDir(s.RemoteUser)
+
+	dc := devcontainerJSON{
+		Name:         s.Name,
+		Image:        s.Image,
+		Features:     map[string]map[string]any{},
+		ContainerEnv: map[string]string{},
+		ForwardPorts: s.Ports,
+		RemoteUser:   s.RemoteUser,
+	}
+
+	var featureOrder []string
+	var scripted []registry.Entry
+	for _, e := range s.Entries {
+		if e.Feature != "" {
+			opts := e.Options
+			if opts == nil {
+				opts = map[string]any{}
+			}
+			dc.Features[e.Feature] = opts
+			featureOrder = append(featureOrder, featureID(e.Feature))
+		} else {
+			scripted = append(scripted, e)
+		}
+		for _, m := range e.Mounts {
+			dc.Mounts = appendUnique(dc.Mounts, strings.ReplaceAll(m, "{{home}}", home))
+		}
+		maps.Copy(dc.ContainerEnv, e.Env)
+	}
+	// Features are installed in dependency order (e.g. node before claude).
+	if len(featureOrder) > 1 {
+		dc.OverrideFeatureInstallOrder = featureOrder
+	}
+
+	switch s.SSH {
+	case SSHNone:
+	case SSHMac:
+		const sock = "/run/host-services/ssh-auth.sock"
+		dc.Mounts = append(dc.Mounts, "source="+sock+",target="+sock+",type=bind")
+		dc.ContainerEnv["SSH_AUTH_SOCK"] = sock
+		// Docker Desktop's socket is root:root 0660. The bind mount resets on
+		// every start, so fix ownership on start rather than once on create.
+		dc.PostStartCommand = `sudo chown "$(id -u)" ` + sock
+	case SSHLinux:
+		dc.Mounts = append(dc.Mounts, "source=${localEnv:SSH_AUTH_SOCK},target=/ssh-agent,type=bind")
+		dc.ContainerEnv["SSH_AUTH_SOCK"] = "/ssh-agent"
+	default:
+		return nil, fmt.Errorf("devcontainer: unknown ssh mode %q", s.SSH)
+	}
+
+	if s.GitConfig {
+		dc.Mounts = append(dc.Mounts, "source=${localEnv:HOME}/.gitconfig,target="+home+"/.gitconfig-host,type=bind,readonly")
+	}
+
+	var guardFiles []File
+	var guardSteps string
+	if s.AgentGuard || s.AgentSandbox {
+		var err error
+		policy := agentPolicy{Guard: s.AgentGuard, Sandbox: s.AgentSandbox}
+		if guardFiles, guardSteps, err = agentGuard(s.Entries, policy); err != nil {
+			return nil, err
+		}
+	}
+
+	volumes := volumeTargets(dc.Mounts)
+	var files []File
+	if len(scripted) > 0 || len(volumes) > 0 || s.GitConfig || guardSteps != "" {
+		dc.PostCreateCommand = "bash " + Dir + "/scripts/post-create.sh"
+		files = append(files, postCreate(scripted, volumes, s.GitConfig, guardSteps))
+		for _, e := range scripted {
+			files = append(files, entryScript(e))
+		}
+	}
+	files = append(files, guardFiles...)
+
+	if len(dc.Features) == 0 {
+		dc.Features = nil
+	}
+	if len(dc.ContainerEnv) == 0 {
+		dc.ContainerEnv = nil
+	}
+
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(dc); err != nil {
+		return nil, err
+	}
+	files = append([]File{{Path: path.Join(Dir, "devcontainer.json"), Data: buf.Bytes()}}, files...)
+	return files, nil
+}
+
+func postCreate(entries []registry.Entry, volumes []string, gitConfig bool, extra string) File {
+	var b strings.Builder
+	b.WriteString("#!/usr/bin/env bash\n")
+	b.WriteString("# Generated by dws. Runs once after the container is created.\n")
+	b.WriteString("set -euo pipefail\n")
+	b.WriteString(`cd "$(dirname "$0")"` + "\n")
+	if len(volumes) > 0 {
+		// New named volumes are owned by root.
+		b.WriteString("\necho \"==> Fixing volume ownership\"\n")
+		fmt.Fprintf(&b, "sudo chown -R \"$(id -u):$(id -g)\" %s\n", strings.Join(volumes, " "))
+	}
+	for _, e := range entries {
+		fmt.Fprintf(&b, "\necho \"==> Installing %s\"\nbash ./%s.sh\n", e.Name, e.Name)
+	}
+	if gitConfig {
+		b.WriteString("\necho \"==> Including host git config\"\n")
+		b.WriteString(`git config --global --get-all include.path | grep -qx '~/.gitconfig-host' ||` + "\n")
+		b.WriteString(`  git config --global --add include.path '~/.gitconfig-host'` + "\n")
+	}
+	b.WriteString(extra)
+	return File{Path: path.Join(Dir, "scripts", "post-create.sh"), Data: []byte(b.String()), Exec: true}
+}
+
+func entryScript(e registry.Entry) File {
+	var b strings.Builder
+	b.WriteString("#!/usr/bin/env bash\n")
+	desc := e.Description
+	if desc == "" {
+		desc = e.Name
+	}
+	fmt.Fprintf(&b, "# %s (%s). Generated by dws.\n", desc, e.Kind)
+	b.WriteString("set -euo pipefail\n\n")
+	b.WriteString(strings.TrimRight(e.Script, "\n"))
+	b.WriteString("\n")
+	return File{Path: path.Join(Dir, "scripts", e.Name+".sh"), Data: []byte(b.String()), Exec: true}
+}
+
+// volumeTargets returns the target paths of type=volume mounts.
+func volumeTargets(mounts []string) []string {
+	var out []string
+	for _, m := range mounts {
+		var target string
+		isVolume := false
+		for _, kv := range strings.Split(m, ",") {
+			k, v, _ := strings.Cut(kv, "=")
+			switch k {
+			case "target", "dst", "destination":
+				target = v
+			case "type":
+				isVolume = v == "volume"
+			}
+		}
+		if isVolume && target != "" {
+			out = append(out, target)
+		}
+	}
+	return out
+}
+
+// featureID strips the version tag, as overrideFeatureInstallOrder expects.
+func featureID(ref string) string {
+	if i := strings.LastIndex(ref, ":"); i > strings.LastIndex(ref, "/") {
+		return ref[:i]
+	}
+	return ref
+}
+
+func homeDir(user string) string {
+	if user == "root" {
+		return "/root"
+	}
+	return "/home/" + user
+}
+
+func appendUnique(s []string, v string) []string {
+	if slices.Contains(s, v) {
+		return s
+	}
+	return append(s, v)
+}

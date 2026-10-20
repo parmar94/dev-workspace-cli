@@ -1,0 +1,4 @@
+description: Go backend with a Node.js frontend
+languages: [go, node]
+agents: [claude]
+tools: [gh, jq]
