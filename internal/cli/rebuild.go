@@ -68,7 +68,7 @@ func runRebuild(cmd *cobra.Command, dir string, noCache bool) error {
 	}
 
 	errOut := cmd.ErrOrStderr()
-	fmt.Fprintf(errOut, "Rebuilding the dev container for %s...\n", dir)
+	fmt.Fprintf(errOut, "Rebuilding the dev container for %s\n", abs)
 	c := exec.CommandContext(cmd.Context(), name, args...)
 	c.Stdout, c.Stderr = cmd.OutOrStdout(), errOut
 	if err := c.Run(); err != nil {
